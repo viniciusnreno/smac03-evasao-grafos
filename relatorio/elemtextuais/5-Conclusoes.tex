@@ -1,0 +1,8 @@
+\section{Conclusões}
+\label{conclusoes}
+
+Este trabalho modelou os registros de 4.424 estudantes como duas redes complementares: uma rede de similaridade multirrelacional entre estudantes e uma rede de co-ocorrência de fatores com nós de desfecho. Ambas foram analisadas com detecção de comunidades, assortatividade, centralidade e aprendizado semissupervisionado, e a estrutura obtida foi validada contra o desfecho observado. Mesmo construída sem o desfecho, a rede de estudantes é homofílica ($r=0{,}39$) e se divide em comunidades interpretáveis, com taxas de evasão de 8\% a 94\%. A rede de fatores separa espontaneamente três constelações, cada uma associada a um desfecho. Três hipóteses foram confirmadas (H1, H2 e H4) e uma parcialmente (H3): o escore relacional (AUC 0{,}899) supera o melhor indicador isolado, mas não a regressão logística multivariada.
+
+A principal contribuição é mostrar \textit{como} os fatores se combinam. O fracasso acadêmico precoce e a inadimplência formam perfis de risco distintos, que pedem intervenções distintas. Perfis de ingresso idênticos divergem pela aprovação no 1º e no 2º semestres. Fatores tidos como de risco, como a idade madura, deixam de sê-lo quando o desempenho é bom. A abordagem estende os modelos multirrelacionais de \citet{porto2025} para a evasão e entrega um protótipo reprodutível.
+
+Como trabalhos futuros, sugerem-se: aplicar os modelos aos dados da UNIFEI, com histórico por disciplina e semestre, o que permitiria modelar trajetórias como grafos temporais e dirigidos; aprender os pesos $\alpha,\beta,\gamma$ de forma supervisionada; testar \textit{embeddings} e redes neurais em grafos; e avaliar, com a gestão acadêmica, a utilidade das comunidades como unidades de acompanhamento.

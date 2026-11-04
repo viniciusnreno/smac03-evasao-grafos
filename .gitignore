@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+outputs/artefatos.pkl
+# material da disciplina (não redistribuir)
+/*.pdf
+/*.zip
+/*.png
+# artefatos de compilação LaTeX
+relatorio/*.aux
+relatorio/*.log
+relatorio/*.bbl
+relatorio/*.blg
+relatorio/*.out

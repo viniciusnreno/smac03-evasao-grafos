@@ -1,0 +1,63 @@
+\section{Metodologia}
+\label{metodologia}
+
+A pesquisa é experimental, quantitativa e exploratória, e segue as fases do CRISP-NET \citep{acuna2025}: entendimento do problema e dos dados, preparação, modelagem em rede, análise estrutural, avaliação e implantação (protótipo).
+
+\subsection{Modelagem}
+\label{ssec:modelagem}
+
+\textbf{Dataset.} O conjunto UCI~697 \citep{realinho2022} contém 4.424 estudantes e 36 atributos, sem valores ausentes, e o desfecho \textit{Target} com 1.421 evasões (32{,}1\%), 794 matriculados (17{,}9\%) e 2.209 graduados (49{,}9\%). Os atributos macroeconômicos (desemprego, inflação, PIB) descrevem o ano de ingresso, e não o estudante, e por isso foram descartados. Os demais foram curados em 20 atributos categóricos, organizados em três dimensões (Tabela~\ref{tab-atributos}). Variáveis numéricas foram discretizadas em faixas ordinais, como em \citet{porto2025}; a escolaridade dos pais (29 códigos) foi agrupada em 4 níveis; e as formas de ingresso (18 códigos) em 6 grupos. Do desempenho semestral derivaram-se a \textit{taxa de aprovação} (aprovadas/inscritas) e a \textit{média das aprovadas}. Esta última fica indefinida quando não houve aprovação, para não duplicar a informação de ``aprovação 0\%''. A binarização atributo=valor gera 77 \textit{fatores}.
+
+\begin{table}[hbt!]
+\caption{Atributos curados por dimensão (O = ordinal, N = nominal).}
+\label{tab-atributos}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{|l|l|}
+\hline
+\rowcolor[HTML]{CBCEFB}
+\textbf{Dimensão} & \textbf{Atributos} \\ \hline
+\begin{tabular}[c]{@{}l@{}}ACAD\\ (desempenho)\end{tabular} &
+\begin{tabular}[c]{@{}l@{}}Nota de admissão (O), Nota da formação anterior (O),\\ Aprovação 1º/2º sem. (O), Média 1º/2º sem. (O),\\ Disciplina sem avaliação (N)\end{tabular} \\ \hline
+\begin{tabular}[c]{@{}l@{}}SOCIO\\ (socioeconômica)\end{tabular} &
+\begin{tabular}[c]{@{}l@{}}Devedor, Mensalidade em dia, Bolsista, Deslocado (N),\\ Escolaridade da mãe e do pai (O)\end{tabular} \\ \hline
+\begin{tabular}[c]{@{}l@{}}DEMO\\ (perfil/ingresso)\end{tabular} &
+\begin{tabular}[c]{@{}l@{}}Idade no ingresso (O), Gênero, Casado/união, Turno noturno,\\ Internacional, Forma de ingresso, Curso (N)\end{tabular} \\ \hline
+\end{tabular}}
+\end{table}
+
+\textbf{Modelo 1 -- Rede de Similaridade Multirrelacional.} $G_1=(V,E,w)$, em que $V$ é o conjunto de estudantes. Para cada dimensão $g\in\{\mathrm{ACAD},\mathrm{SOCIO},\mathrm{DEMO}\}$, a similaridade entre $i$ e $j$ é a média, sobre os atributos $a\in g$, de $s_a(i,j)=1-|r_{ia}-r_{ja}|/(A_a-1)$ (ordinais com $A_a$ níveis), $s_a=\mathbb{1}[x_{ia}=x_{ja}]$ (nominais) ou $s_a=0{,}5$ (valor ausente). As dimensões são combinadas como em \citet{porto2025}:
+\begin{equation}
+R_{ij}=\alpha\,S^{\mathrm{ACAD}}_{ij}+\beta\,S^{\mathrm{SOCIO}}_{ij}+\gamma\,S^{\mathrm{DEMO}}_{ij},\quad \alpha+\beta+\gamma=1.
+\end{equation}
+A aresta $(i,j)$ existe se $j$ está entre os $k$ vizinhos de maior $R_{ij}$ de $i$ (ou vice-versa), com $w(i,j)=R_{ij}$. Adotou-se $\alpha=0{,}5$, $\beta=0{,}3$, $\gamma=0{,}2$ e $k=15$, e a sensibilidade a essa escolha foi testada (Seção~\ref{resultados}). Optou-se pelo $k$-NN em vez de um limiar global de similaridade porque ele garante grafo conexo, grau controlado e custo $O(|V|k)$ em arestas. \textbf{O desfecho não participa da construção}: ele é usado apenas para avaliar se a estrutura obtida tem relação com a evasão. Um segundo grafo, $G_1^{\mathrm{ing}}$, usa apenas os atributos conhecidos antes do desempenho em disciplinas (cenário de alerta precoce).
+
+\textbf{Modelo 2 -- Rede de Fatores.} Parte-se do grafo bipartido estudante--fator e projeta-se sobre os fatores. $G_2=(F\cup D, E_2, w)$, em que $F$ são os fatores com suporte $\geq 40$ e $D=\{$Evasão, Matriculado, Graduado$\}$ são nós de desfecho. Há aresta entre $a$ e $b$ (de atributos distintos) se co-ocorrem em $\geq 40$ estudantes e $\mathrm{lift}(a,b)\geq 1{,}15$, com $w=\mathrm{lift}$. Assim, a vizinhança de ``Evasão'' é a constelação de fatores sobre-representados entre os evadidos, e as arestas fator--fator mostram como as condições se entrelaçam.
+
+\subsection{Método de Solução}
+\label{ssec:solucao}
+
+O protótipo foi implementado em Python~3.12 com NetworkX \citep{hagberg2008}, NumPy, pandas e scikit-learn, em quatro módulos: \texttt{preprocess} (curadoria), \texttt{graphs} (Modelos 1 e 2), \texttt{analysis} (métricas e validação) e \texttt{plots}. Um explorador interativo permite consultar um estudante, sua comunidade, seus vizinhos e seu escore de risco. A construção de $G_1$ (Algoritmo~\ref{alg-knn}) é vetorizada em blocos de 512 linhas, o que evita materializar a matriz $|V|^2$ completa; a execução completa leva cerca de 4 minutos em um notebook.
+
+\begin{algorithm}[ht!]
+\small
+\normalem
+\KwData{atributos curados $X$, pesos $(\alpha,\beta,\gamma)$, $k$}
+\KwResult{$G_1=(V,E,w)$}
+$V\leftarrow$ estudantes; $E\leftarrow\emptyset$\;
+\For{cada bloco $B\subset V$}{
+  $R_B \leftarrow \alpha S^{\mathrm{ACAD}}(B,V)+\beta S^{\mathrm{SOCIO}}(B,V)+\gamma S^{\mathrm{DEMO}}(B,V)$\;
+  $R_B[i,i]\leftarrow -1$ \tcp*{sem laços}
+  \For{$i\in B$}{
+    \For{$j\in \mathrm{top}_k(R_B[i,:])$}{
+       \lIf{$(i,j)\notin E$}{$E\leftarrow E\cup\{(i,j)\}$; $w(i,j)\leftarrow R_{ij}$}
+    }
+  }
+}
+\Return{$G_1$}
+\caption{Construção da rede de similaridade}
+\label{alg-knn}
+\end{algorithm}
+
+\textbf{Análises.} Sobre $G_1$: (\textit{i}) métricas estruturais, assortatividade e matriz de mistura pelo desfecho (H1); (\textit{ii}) comunidades por Louvain, Fast Greedy e Label Propagation, comparadas por modularidade $Q$, porcentagem de arestas intercomunidades e NMI/ARI em relação ao desfecho, e caracterização das comunidades pelos fatores com frequência local $\geq 50\%$ e lift $\geq 1{,}2$ (H2); (\textit{iii}) \textit{pares divergentes}: em $G_1^{\mathrm{ing}}$, pares com similaridade de ingresso acima do 3º quartil e desfechos Evasão$\times$Graduado são contrastados com pares Graduado$\times$Graduado igualmente similares, para medir quais atributos (inclusive os de trajetória, ausentes de $G_1^{\mathrm{ing}}$) mais diferem; (\textit{iv}) \textit{escore de risco relacional} (H3) por voto ponderado dos vizinhos e por propagação de rótulos \citep{zhou2004} ($\alpha=0{,}8$), em validação cruzada estratificada de 5 partições. Em cada partição, os rótulos do teste são ocultados e os escores são comparados, pela AUC-ROC e pela precisão nos 20\% de maior risco, com a regressão logística sobre os 77 fatores, com o melhor atributo isolado e com um modelo híbrido (logística + voto dos vizinhos). Sobre $G_2$: centralidade (força, intermediação e PageRank), comunidades Louvain, vizinhança do nó Evasão e \textit{sinergia} entre pares de fatores, definida como a taxa de evasão do par menos a maior taxa individual (H4).
+
+\textbf{Organização do grupo.} Coordenador: [Integrante A] (cronograma, diretrizes, repositório e relatório). Modeladores: [B] (delimitação do problema, modelagem formal) e [C] (curadoria do dataset, interpretação). Desenvolvedores: [D] (arquitetura, núcleo algorítmico) e [E] (testes, validação quantitativa, demonstração). Cada atividade crítica teve um responsável principal e um corresponsável, conforme a Tabela~1 das diretrizes. Código, figuras e slides estão em \url{https://github.com/USUARIO/REPOSITORIO}.
