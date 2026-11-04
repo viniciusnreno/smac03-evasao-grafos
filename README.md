@@ -21,14 +21,39 @@ O desfecho **não** é usado para construir o Modelo 1 – serve só para avalia
 - Sensibilidade a α, β, γ e k
 - Rede de fatores: centralidade, comunidades, vizinhança do nó Evasão, sinergia entre pares de fatores
 
-## Como executar
+## Instalação
+
+Requisitos: Python 3.10+ e Git. O repositório é privado: peça ao dono para ser adicionado como colaborador.
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
+git clone git@github.com:viniciusnreno/smac03-evasao-grafos.git
+cd smac03-evasao-grafos
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m src.main            # ~4 min; use --rapido para pular a sensibilidade
+```
+
+## Como executar
+
+1. **Pipeline completo**: gera tabelas, figuras e os artefatos usados pelo explorador.
+   ```bash
+   python -m src.main            # ~4 min; use --rapido para pular a análise de sensibilidade
+   ```
+   Saídas em `outputs/`: `tabelas/*.csv`, `figuras/*.png`, `resumo.json` e `artefatos.pkl`.
+
+2. **Explorador interativo** (demo): depende do `outputs/artefatos.pkl` gerado no passo 1, que não é versionado.
+   ```bash
+   streamlit run app/explorador.py
+   ```
+
+Para testar outros pesos ou outro `k`:
+```bash
 python -m src.main --alpha 0.3 --beta 0.5 --gamma 0.2 --k 25 --out outputs_alt
 ```
-Saídas em `outputs/`: `tabelas/*.csv`, `figuras/*.png`, `resumo.json`.
+
+### Relatório e slides
+- **Relatório**: o projeto LaTeX está em `relatorio/`. Envie a pasta para o Overleaf e compile com pdfLaTeX. `relatorio/relatorio_preview.pdf` é uma prévia compilada.
+- **Slides**: edite `slides/apresentacao.pptx` direto no PowerPoint ou no Google Slides. O `slides/gerar_slides.js` foi usado só para gerar a primeira versão.
 
 ## Estrutura
 ```
