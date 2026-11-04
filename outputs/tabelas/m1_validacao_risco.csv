@@ -1,0 +1,6 @@
+metodo,AUC,precisao_top20_%
+Grafo: voto dos vizinhos,0.8936172905208796,91.289592760181
+Grafo: propagação de rótulos,0.8986931435911027,91.4027149321267
+Tabular: regressão logística,0.9140474819574046,92.64705882352942
+Tabular: melhor variável isolada,0.8561842801814653,87.55656108597285
+Híbrido: logística + escore relacional,0.9148700232444074,92.76018099547511

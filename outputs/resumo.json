@@ -1,0 +1,50 @@
+{
+  "pesos": {
+    "ACAD": 0.5,
+    "SOCIO": 0.3,
+    "DEMO": 0.2
+  },
+  "k": 15,
+  "modelo1": {
+    "vertices": 4424,
+    "arestas": 49532,
+    "densidade": 0.00506271875724421,
+    "grau_medio": 22.39240506329114,
+    "grau_max": 58,
+    "componentes": 1,
+    "clustering_medio": 0.26327618843489375,
+    "assortatividade_desfecho": 0.3947870033816381,
+    "homofilia_observada": 0.6321973673584753,
+    "homofilia_esperada": 0.38470489341386294
+  },
+  "modelo1_ingresso": {
+    "vertices": 4424,
+    "arestas": 46616,
+    "densidade": 0.004764671274886862,
+    "grau_medio": 21.074141048824593,
+    "grau_max": 60,
+    "componentes": 1,
+    "clustering_medio": 0.39949941370701914,
+    "assortatividade_desfecho": 0.18425342739848555,
+    "homofilia_observada": 0.5039256907499571,
+    "homofilia_esperada": 0.38470489341386294
+  },
+  "modelo2": {
+    "vertices": 77,
+    "arestas": 513,
+    "densidade": 0.17532467532467533,
+    "grau_medio": 13.324675324675324,
+    "grau_max": 26,
+    "componentes": 7,
+    "clustering_medio": 0.4167269573444741
+  },
+  "metodo_comunidades_escolhido": "Louvain (Multilevel)",
+  "pares_divergentes": {
+    "limiar_similaridade": 0.9714285731315613,
+    "evasao_x_graduado": 2382,
+    "graduado_x_graduado": 6414
+  },
+  "evadidos_vizinhanca_nao_evadida_%": 16.678395496129486,
+  "melhor_variavel_isolada": "Aprovação 2º sem",
+  "melhor_variavel_isolada_ingresso": "Idade no ingresso"
+}
