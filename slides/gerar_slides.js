@@ -360,7 +360,7 @@ async function icon(Comp, color) {
     { text: "Trajetórias como grafos temporais e dirigidos", options: { bullet: true, breakLine: true } },
     { text: "Pesos α, β, γ aprendidos", options: { bullet: true } },
   ], { isTextBox: true, x: 7.0, y: 1.7, w: 5.73, h: 4.6, fontSize: 16, color: C.background1, margin: 0, paraSpaceAfter: 8, valign: "top" });
-  s.addText("Código, relatório e slides: github.com/USUARIO/REPOSITORIO", { isTextBox: true, x: M, y: 6.5, w: 12, h: 0.4, fontSize: 14, color: C.background2, margin: 0 });
+  s.addText("Código, relatório e slides: github.com/viniciusnreno/smac03-evasao-grafos", { isTextBox: true, x: M, y: 6.5, w: 12, h: 0.4, fontSize: 14, color: C.background2, margin: 0 });
   s.addNotes("Fechar respondendo à questão de pesquisa. Abrir para perguntas.");
 
   await pres.writeFile({ fileName: OUT });
