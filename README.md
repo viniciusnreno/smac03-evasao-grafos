@@ -43,6 +43,8 @@ Em construção: os módulos de `src/` ainda são esqueletos.
 CLAUDE.md                   # regras para sessões do Claude Code
 data/data.csv
 src/
+├── grafo.py                # classe Grafo (base comum)
+├── modelo.py               # classe abstrata ModeloGrafo (base comum)
 ├── dados.py                # Carlos
 ├── grafo_similaridade.py   # Carlos
 ├── corte_minimo.py         # Rafael (Edmonds–Karp próprio)

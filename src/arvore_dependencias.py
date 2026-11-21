@@ -1,1 +1,6 @@
-"""G2: árvore geradora máxima de informação mútua, Kruskal + union-find (responsável: Carlos)."""
+"""G2: árvore de dependências. Classe: ``ArvoreDependencias(ModeloGrafo)``.
+
+Responsável: Carlos.
+
+Árvore geradora máxima de informação mútua por Kruskal + union-find.
+"""

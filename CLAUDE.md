@@ -37,6 +37,7 @@ Edite só os arquivos da pessoa que pediu a tarefa. Para mexer em arquivo de out
 
 | Arquivo | Dono |
 |---|---|
+| `src/grafo.py`, `modelo.py` (base comum, fazer primeiro) | a definir: Carlos ou Rafael |
 | `src/dados.py`, `grafo_similaridade.py`, `arvore_dependencias.py`, `dag_trajetorias.py`, `main.py` | Carlos |
 | `src/corte_minimo.py`, `avaliacao.py`, `figuras.py` | Rafael |
 | `relatorio/main.tex`, `configuracao.tex`, capa, `referencias.bib`, seções 1, 2 e 5 | Nathan |
@@ -45,17 +46,26 @@ Edite só os arquivos da pessoa que pediu a tarefa. Para mexer em arquivo de out
 
 ## Contrato do grafo
 
-```python
-Grafo = dict[int, dict[int, float]]   # grafo[u][v] = capacidade de u → v
+Duas classes base, em `src/`:
 
-grafo_similaridade.construir_knn(X, k, pesos) -> Grafo
-corte_minimo.classificar(grafo, rotulos_treino, idx_teste) -> dict[int, bool]
+- **`Grafo`** (`grafo.py`, concreta): lista de adjacência com peso, `dict[vértice, dict[vértice, float]]`, dirigida ou não. Usada pelos três modelos. Grafo não dirigido grava os dois sentidos, o que garante o kNN simétrico. `para_networkx()` existe só para os asserts.
+- **`ModeloGrafo`** (`modelo.py`, abstrata): todo modelo implementa `construir(base) -> Grafo`, `executar() -> dict` e `destaques() -> dict`. É o que o `Pipeline` e a futura interface gráfica usam.
+
+```python
+class GrafoSimilaridade(ModeloGrafo)    # G1 · Carlos
+class ArvoreDependencias(ModeloGrafo)   # G2 · Carlos (Kruskal)
+class DagTrajetorias(ModeloGrafo)       # G3 · Carlos (Kahn + Bellman-Ford)
+
+# Fronteira Carlos ↔ Rafael (G1)
+GrafoSimilaridade(momento, k, pesos=None).construir(base) -> Grafo
+CorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) -> dict[int, bool]
 ```
 
-- Vértice = posição do aluno no DataFrame após remover `Enrolled` e `reset_index`.
-- kNN simétrico: `grafo[i][j] == grafo[j][i]`.
-- S e T são criados dentro de `corte_minimo`.
+- `CorteMinimo` é classe de algoritmo, não modelo; `GrafoSimilaridade.executar()` a chama.
+- No G1, vértice = posição do aluno no DataFrame após remover `Enrolled` e `reset_index`. No G2 e no G3, vértices são `str` (atributos e estados).
+- S e T são criados dentro de `CorteMinimo`, não no grafo recebido.
 - Rótulo `True` = evadiu, `False` = formou.
+- Tudo o que for específico de um modelo (previsões, métricas) volta no dict de `executar()`; não crie métodos abstratos novos sem combinar.
 - Parâmetros novos entram como argumentos opcionais, sem quebrar as assinaturas.
 
 ## Dados
@@ -69,6 +79,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python src/main.py          # pipeline completo, grava em outputs/
 ```
+
+## Padrões de código
+
+- **PEP 8 sempre**: 4 espaços, linhas de até 79 caracteres, `snake_case` para funções, métodos e variáveis, `CamelCase` para classes, `MAIUSCULAS` para constantes, imports no topo (padrão, terceiros, locais).
+- **Orientação a objetos**: cada módulo de `src/` expõe uma classe principal com métodos bem definidos (tabela em [docs/04-arquitetura.md](docs/04-arquitetura.md)). Os três modelos herdam de `ModeloGrafo` (`abc.ABC`). Hiperparâmetros entram no `__init__`; os dados entram nos métodos.
+- **Lógica separada da interface**: as classes não imprimem, não plotam e não leem arquivos fora do que é a responsabilidade delas. Elas devolvem dados. Isso permite que uma interface gráfica (bônus, fase futura) use as mesmas classes que o pipeline.
+- Métodos auxiliares internos começam com `_` (ex.: `_bfs_residual`).
 
 ## Convenções
 
