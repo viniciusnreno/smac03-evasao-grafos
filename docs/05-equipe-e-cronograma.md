@@ -8,8 +8,8 @@ O integrante designado como Modelador B (Gabriel) trancou a disciplina. As taref
 |---|---|---|---|---|
 | Nathan | Coordenador | — | Seções 1, 2 e 5; `main.tex`, capa, `referencias.bib`; revisão final e envio no SIGAA | Abertura, limitações e conclusões |
 | Vinícius | Modelador | — | Seção 3.1, Eq. 1 (Gower), Tab. 1, Fig. 1 (rede de fluxo); texto da seção 4 | Protocolo, fatores, ablação, árvore |
-| Carlos | Desenvolvedor A | `dados`, `grafo_similaridade`, `arvore_dependencias`, `dag_trajetorias`, `main` | Seção 3.2, Alg. 1–2, Tab. 2, Fig. 2 (protocolo) | Corte mínimo e demonstração |
-| Rafael | Desenvolvedor B | `corte_minimo` (Edmonds–Karp), `avaliacao`, `figuras` | Figs. 3–5, Tab. 3 | Resultados no teste e momento de intervir |
+| Carlos | Desenvolvedor A | `grafo_similaridade`, `arvore_dependencias`, `dag_trajetorias`, `main` | Seção 3.2, Alg. 1–2, Tab. 2, Fig. 2 (protocolo) | Corte mínimo e demonstração |
+| Rafael | Desenvolvedor B | `grafo`, `modelo`, `dados`, `corte_minimo` (Edmonds–Karp), `avaliacao`, `figuras` | Figs. 3–5, Tab. 3 | Resultados no teste e momento de intervir |
 
 ## Cronograma
 
