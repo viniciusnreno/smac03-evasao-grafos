@@ -40,7 +40,7 @@ data/data.csv
 src/
 ├── grafo.py                # classe Grafo (base comum)
 ├── modelo.py               # classe abstrata ModeloGrafo (base comum)
-├── dados.py                # Carlos
+├── dados.py                # Rafael
 ├── grafo_similaridade.py   # Carlos
 ├── corte_minimo.py         # Rafael (Edmonds–Karp próprio)
 ├── arvore_dependencias.py  # Carlos (Kruskal)
