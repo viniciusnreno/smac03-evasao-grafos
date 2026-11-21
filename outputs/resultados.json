@@ -1,0 +1,301 @@
+{
+  "dados": {
+    "alunos": 3630,
+    "treino": 2904,
+    "teste": 726,
+    "taxa_evasao": 0.39146,
+    "taxa_evasao_treino": 0.391529,
+    "taxa_evasao_teste": 0.391185
+  },
+  "hiperparametros": {
+    "divisao": {
+      "treino": 0.8,
+      "teste": 0.2,
+      "estratificada": true,
+      "semente": 42
+    },
+    "dobras_cv_treino": 5,
+    "g1": {
+      "k": {
+        "T0": 25,
+        "T1": 25,
+        "T2": 40
+      },
+      "lam": 1.0,
+      "pesos_atributos": "informação mútua com o desfecho (treino)",
+      "capacidade": "c(i,j) = 1 - d_Gower(i,j)",
+      "taxas_derivadas": true
+    },
+    "assortatividade": {
+      "k": 10,
+      "pesos": "iguais",
+      "permutacoes": 200
+    },
+    "g2": {
+      "peso": "informação mútua (bits, treino)",
+      "algoritmo": "Kruskal decrescente + union-find",
+      "bootstrap_estabilidade": 100
+    },
+    "avaliacao": {
+      "bootstrap_ic95": 1000,
+      "splits_robustez": 10
+    }
+  },
+  "g1": {
+    "T0": {
+      "k": 25,
+      "lam": 1.0,
+      "fluxo": 14337.911149,
+      "num_caminhos": 1103,
+      "num_vertices": 3630,
+      "num_arestas": 60889,
+      "num_arestas_cortadas": 16709,
+      "pesos": {
+        "Tuition fees up to date": 0.192221,
+        "Course": 0.115955,
+        "Scholarship holder": 0.106964,
+        "Age at enrollment": 0.10218,
+        "Application mode": 0.098623,
+        "Debtor": 0.066968,
+        "Gender": 0.060422,
+        "Previous qualification (grade)": 0.036085,
+        "Mother's occupation": 0.028925,
+        "Mother's qualification": 0.028535,
+        "Previous qualification": 0.027721,
+        "Father's qualification": 0.027055,
+        "Father's occupation": 0.022998,
+        "Admission grade": 0.020122,
+        "Application order": 0.014006,
+        "Displaced": 0.010944,
+        "Marital status": 0.010791,
+        "Unemployment rate": 0.007912,
+        "GDP": 0.007912,
+        "Inflation rate": 0.006877,
+        "Daytime/evening attendance": 0.006469,
+        "Nacionality": 0.000141,
+        "International": 0.000141,
+        "Educational special needs": 3.2e-05
+      },
+      "teste": {
+        "acuracia_balanceada": 0.738592,
+        "recall_evasao": 0.619718,
+        "especificidade": 0.857466,
+        "precisao_evasao": 0.736402,
+        "f1_evasao": 0.67304,
+        "acuracia": 0.764463,
+        "vp": 176,
+        "fp": 63,
+        "fn": 108,
+        "vn": 379
+      }
+    },
+    "T1": {
+      "k": 25,
+      "lam": 1.0,
+      "fluxo": 9141.220535,
+      "num_caminhos": 911,
+      "num_vertices": 3630,
+      "num_arestas": 61726,
+      "num_arestas_cortadas": 9853,
+      "pesos": {
+        "taxa_aprov_s1": 0.207747,
+        "Curricular units 1st sem (approved)": 0.192705,
+        "Curricular units 1st sem (grade)": 0.119701,
+        "Tuition fees up to date": 0.08114,
+        "Course": 0.048946,
+        "Scholarship holder": 0.045151,
+        "Age at enrollment": 0.043132,
+        "Application mode": 0.04163,
+        "Curricular units 1st sem (evaluations)": 0.03246,
+        "Debtor": 0.028268,
+        "Gender": 0.025505,
+        "Curricular units 1st sem (enrolled)": 0.025271,
+        "Previous qualification (grade)": 0.015232,
+        "Mother's occupation": 0.01221,
+        "Mother's qualification": 0.012045,
+        "Previous qualification": 0.011702,
+        "Father's qualification": 0.01142,
+        "Father's occupation": 0.009708,
+        "Admission grade": 0.008494,
+        "Application order": 0.005912,
+        "Displaced": 0.00462,
+        "Marital status": 0.004555,
+        "Unemployment rate": 0.00334,
+        "GDP": 0.00334,
+        "Inflation rate": 0.002903,
+        "Daytime/evening attendance": 0.002731,
+        "Nacionality": 6e-05,
+        "International": 6e-05,
+        "Educational special needs": 1.4e-05
+      },
+      "teste": {
+        "acuracia_balanceada": 0.878163,
+        "recall_evasao": 0.830986,
+        "especificidade": 0.925339,
+        "precisao_evasao": 0.877323,
+        "f1_evasao": 0.853526,
+        "acuracia": 0.88843,
+        "vp": 236,
+        "fp": 33,
+        "fn": 48,
+        "vn": 409
+      }
+    },
+    "T2": {
+      "k": 40,
+      "lam": 1.0,
+      "fluxo": 12749.99561,
+      "num_caminhos": 1014,
+      "num_vertices": 3630,
+      "num_arestas": 100270,
+      "num_arestas_cortadas": 13673,
+      "pesos": {
+        "taxa_aprov_s2": 0.150217,
+        "Curricular units 2nd sem (approved)": 0.129855,
+        "taxa_aprov_s1": 0.120949,
+        "Curricular units 1st sem (approved)": 0.112192,
+        "Curricular units 2nd sem (grade)": 0.100446,
+        "Curricular units 1st sem (grade)": 0.06969,
+        "Tuition fees up to date": 0.047239,
+        "Course": 0.028496,
+        "Scholarship holder": 0.026287,
+        "Age at enrollment": 0.025111,
+        "Application mode": 0.024237,
+        "Curricular units 1st sem (evaluations)": 0.018898,
+        "Curricular units 2nd sem (enrolled)": 0.018448,
+        "Debtor": 0.016458,
+        "Curricular units 2nd sem (evaluations)": 0.015576,
+        "Gender": 0.014849,
+        "Curricular units 1st sem (enrolled)": 0.014713,
+        "Previous qualification (grade)": 0.008868,
+        "Mother's occupation": 0.007108,
+        "Mother's qualification": 0.007013,
+        "Previous qualification": 0.006813,
+        "Father's qualification": 0.006649,
+        "Father's occupation": 0.005652,
+        "Admission grade": 0.004945,
+        "Application order": 0.003442,
+        "Curricular units 2nd sem (without evaluations)": 0.00326,
+        "Displaced": 0.002689,
+        "Marital status": 0.002652,
+        "Unemployment rate": 0.001944,
+        "GDP": 0.001944,
+        "Inflation rate": 0.00169,
+        "Daytime/evening attendance": 0.00159,
+        "Nacionality": 3.5e-05,
+        "International": 3.5e-05,
+        "Educational special needs": 8e-06
+      },
+      "teste": {
+        "acuracia_balanceada": 0.907455,
+        "recall_evasao": 0.855634,
+        "especificidade": 0.959276,
+        "precisao_evasao": 0.931034,
+        "f1_evasao": 0.891743,
+        "acuracia": 0.918733,
+        "vp": 243,
+        "fp": 18,
+        "fn": 41,
+        "vn": 424
+      }
+    }
+  },
+  "assortatividade": {
+    "T0": {
+      "r": 0.273121,
+      "p_permutacao": 0.004975,
+      "max_permutacao": 0.017567,
+      "num_arestas": 21649
+    },
+    "T1": {
+      "r": 0.351599,
+      "p_permutacao": 0.004975,
+      "max_permutacao": 0.015338,
+      "num_arestas": 21826
+    },
+    "T2": {
+      "r": 0.441465,
+      "p_permutacao": 0.004975,
+      "max_permutacao": 0.017146,
+      "num_arestas": 21801
+    }
+  },
+  "g2": {
+    "T0": {
+      "num_vertices": 25,
+      "num_arestas_arvore": 24,
+      "peso_total": 12.047681,
+      "vizinhos_desfecho": [
+        {
+          "atributo": "Tuition fees up to date",
+          "im_bits": 0.148993,
+          "estabilidade": 1.0
+        },
+        {
+          "atributo": "Course",
+          "im_bits": 0.089878,
+          "estabilidade": 0.86
+        },
+        {
+          "atributo": "Scholarship holder",
+          "im_bits": 0.082909,
+          "estabilidade": 0.99
+        }
+      ],
+      "sobreposicao_treino_teste": 0.791667,
+      "estabilidade_media": 0.854583
+    },
+    "T1": {
+      "num_vertices": 32,
+      "num_arestas_arvore": 31,
+      "peso_total": 15.66776,
+      "vizinhos_desfecho": [
+        {
+          "atributo": "taxa_aprov_s1",
+          "im_bits": 0.381475,
+          "estabilidade": 1.0
+        },
+        {
+          "atributo": "Tuition fees up to date",
+          "im_bits": 0.148993,
+          "estabilidade": 1.0
+        },
+        {
+          "atributo": "Scholarship holder",
+          "im_bits": 0.082909,
+          "estabilidade": 0.97
+        }
+      ],
+      "sobreposicao_treino_teste": 0.774194,
+      "estabilidade_media": 0.816452
+    },
+    "T2": {
+      "num_vertices": 39,
+      "num_arestas_arvore": 38,
+      "peso_total": 20.717283,
+      "vizinhos_desfecho": [
+        {
+          "atributo": "taxa_aprov_s2",
+          "im_bits": 0.473786,
+          "estabilidade": 1.0
+        },
+        {
+          "atributo": "Tuition fees up to date",
+          "im_bits": 0.148993,
+          "estabilidade": 1.0
+        },
+        {
+          "atributo": "Scholarship holder",
+          "im_bits": 0.082909,
+          "estabilidade": 0.93
+        }
+      ],
+      "sobreposicao_treino_teste": 0.763158,
+      "estabilidade_media": 0.803684
+    }
+  },
+  "g3": {
+    "status": "não implementado"
+  },
+  "tempo_s": 179.8
+}
