@@ -13,9 +13,9 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | 4 | `dados.py`: carga, filtro Enrolled, split 80/20, momentos | Rafael | Sáb 21/11, 19h | concluída | Classe `BaseDeDados`; 3.630 alunos, 2.904/726; reproduz os números de treino de `analise_v2` |
 | 5 | `grafo_similaridade.py`: Gower + kNN | Rafael (Carlos não iniciou) | Sáb 21/11, 19h | concluída | `GrafoSimilaridade` integrado ao corte mínimo; Gower e kNN conferidos por força bruta; reproduz a IM e a assortatividade (0,27/0,35/0,44) do `analise_v2`; CV no treino: 0,732 / 0,847 / 0,875 |
 | 6 | `corte_minimo.py`: Edmonds–Karp próprio + corte por BFS | Rafael | Sáb 21/11, 19h | concluída | Classes `EdmondsKarp` e `ClassificadorCorteMinimo`; conferidas contra o networkx (300 redes + 100 classificações); 0,2 s na escala real. Integrado ao G1 pelo `GrafoSimilaridade.executar()` |
-| 7 | `arvore_dependencias.py`: Kruskal + union-find | Carlos | Sáb 21/11, 21h | pendente | |
-| 8 | `dag_trajetorias.py`: Kahn + Bellman-Ford | Carlos | Sáb 21/11, 21h | pendente | |
-| 9 | `main.py`: pipeline grava em `outputs/` | Carlos | Sáb 21/11, 21h | pendente | |
+| 7 | `arvore_dependencias.py`: Kruskal + union-find | Carlos | Sáb 21/11, 21h | concluída | `ArvoreDependencias` e `UniaoBusca`; vizinhos do Desfecho e IM iguais ao `analise_v2` (T0: mensalidade, curso, bolsa); peso total confere com o networkx; estabilidade por 100 bootstraps |
+| 8 | `dag_trajetorias.py`: Kahn + Bellman-Ford | Rafael (assumiu do Carlos) | Sáb 21/11, 21h | em andamento | |
+| 9 | `main.py`: pipeline grava em `outputs/` | Carlos | Sáb 21/11, 21h | concluída | `Pipeline` roda G1 (teste uma vez), assortatividade (0,273/0,352/0,441, p = 0,005), G2 e, quando existir, G3; grava 9 arquivos em `outputs/`. **G1 no teste: 0,739/0,878/0,907, diferente do oficial (0,763/0,847/0,899): falta decidir qual vale** |
 | 10 | `avaliacao.py`: CV, teste, bootstrap, McNemar, ablação | Rafael | Sáb 21/11, 19h | pendente | |
 | 11 | `figuras.py`: Figs. 3–5 em PDF | Rafael | Sáb 21/11, 21h | pendente | |
 | 12 | Tab. 3 de resultados | Rafael | Sáb 21/11, 23h | pendente | |
