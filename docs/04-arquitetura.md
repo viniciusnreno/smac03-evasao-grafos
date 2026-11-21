@@ -19,8 +19,8 @@ Versões fixadas em [requirements.txt](../requirements.txt).
 ```
 data/data.csv                dataset UCI 697
 src/
-├── grafo.py                 classe Grafo: estrutura comum (base, fazer primeiro)          (a definir)
-├── modelo.py                classe abstrata ModeloGrafo (base, fazer primeiro)           (a definir)
+├── grafo.py                 classe Grafo: estrutura comum (base)                         (Rafael)
+├── modelo.py                classe abstrata ModeloGrafo (base)                           (Rafael)
 ├── dados.py                 carga, filtro Enrolled, split 80/20, atributos por momento   (Carlos)
 ├── grafo_similaridade.py    Gower + kNN (G1)                                            (Carlos)
 ├── corte_minimo.py          Edmonds–Karp próprio e classificação pelo corte (G1)        (Rafael)
@@ -49,8 +49,12 @@ Duas classes base sustentam os três modelos.
 | `adicionar_aresta(u, v, peso)` | inclui u → v; se não dirigido, também v → u |
 | `vizinhos(u)` | `{v: peso}` das arestas que saem de u |
 | `peso(u, v)` | peso da aresta u → v |
-| `vertices()` / `arestas()` | listas de vértices e de `(u, v, peso)` |
-| `para_networkx()` | conversão usada só em asserts de verificação |
+| `tem_aresta(u, v)` | indica se a aresta u → v existe |
+| `vertices()` / `arestas()` | listas de vértices e de `(u, v, peso)`; aresta não dirigida aparece uma vez |
+| `len(g)` / `num_arestas()` / `v in g` | número de vértices, número de arestas, pertinência |
+| `para_networkx(atributo="weight")` | conversão usada só em asserts; use `atributo="capacity"` para comparar fluxo |
+
+`vizinhos(u)` devolve uma visão somente leitura, sem cópia: o Edmonds–Karp deve montar a própria rede residual em vez de alterar o grafo recebido. Vértice ou aresta inexistente gera `KeyError`.
 
 **`ModeloGrafo` (`modelo.py`, abstrata, `abc.ABC`).** Interface comum para o `Pipeline` e a futura interface gráfica.
 
