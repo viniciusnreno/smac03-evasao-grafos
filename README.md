@@ -3,7 +3,9 @@
 Projeto da disciplina SMAC03 – Grafos (UNIFEI, 2026/2), Cenário 3.
 Dataset: [UCI 697 – Predict Students' Dropout and Academic Success](https://archive.ics.uci.edu/dataset/697/predict+students+dropout+and+academic+success).
 
-Contexto do projeto em [docs/README.md](docs/README.md). O plano completo está em [docs/planos/plano-v3.html](docs/planos/plano-v3.html) (plano de ação) e [docs/planos/plano-v2.html](docs/planos/plano-v2.html) (análise técnica).
+Contexto do projeto em [docs/README.md](docs/README.md) e andamento das tarefas em [docs/estado.md](docs/estado.md). O plano completo está em [docs/planos/plano-v3.html](docs/planos/plano-v3.html) (plano de ação) e [docs/planos/plano-v2.html](docs/planos/plano-v2.html) (análise técnica).
+
+Usa o Claude Code? As regras do projeto para as sessões estão em [CLAUDE.md](CLAUDE.md), lido automaticamente.
 
 ## Grafos
 
@@ -16,6 +18,8 @@ Contexto do projeto em [docs/README.md](docs/README.md). O plano completo está 
 Protocolo: alunos "Enrolled" removidos; treino/teste 80/20 estratificado (semente 42); toda escolha é feita só no treino e o teste é usado uma única vez.
 
 ## Instalação
+
+Requisitos: Python 3.12 e Git. O repositório é privado: peça ao dono para ser adicionado como colaborador.
 
 ```bash
 git clone git@github.com:viniciusnreno/smac03-evasao-grafos.git
@@ -36,6 +40,7 @@ Em construção: os módulos de `src/` ainda são esqueletos.
 ## Estrutura
 
 ```
+CLAUDE.md                   # regras para sessões do Claude Code
 data/data.csv
 src/
 ├── dados.py                # Carlos
@@ -51,3 +56,5 @@ docs/                       # documentação do projeto (comece por docs/README.
 relatorio/                  # projeto LaTeX (Overleaf)
 slides/
 ```
+
+**Atenção:** `relatorio/` e `slides/` ainda trazem o conteúdo do modelo v1 (Louvain e comunidades), que foi descartado. Serão reescritos conforme o plano v3.

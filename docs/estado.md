@@ -7,7 +7,7 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | # | Etapa | Responsável | Prazo | Status | Resumo |
 |---|---|---|---|---|---|
 | 1 | Migrar o repositório para a estrutura do v3 | Rafael | Sáb 21/11 | concluída | Código v1 removido, esqueletos em `src/`, planos em `docs/planos/` |
-| 2 | `CLAUDE.md` e documentação em `docs/` | Rafael | Sáb 21/11 | concluída | Regras, donos, contrato do grafo, regras de sessão e 8 páginas de contexto |
+| 2 | `CLAUDE.md` e documentação em `docs/` | Rafael | Sáb 21/11 | concluída | Regras, donos, contrato do grafo, regras de sessão, 8 páginas de contexto e README atualizado |
 | 3 | Subir `analise_v2/` (fonte dos números oficiais) | a definir | Sáb 21/11 | bloqueada | Pasta não está no repositório; descobrir quem tem |
 | 4 | `dados.py`: carga, filtro Enrolled, split 80/20, momentos | Carlos | Sáb 21/11, 19h | pendente | |
 | 5 | `grafo_similaridade.py`: Gower + kNN | Carlos | Sáb 21/11, 19h | pendente | |
