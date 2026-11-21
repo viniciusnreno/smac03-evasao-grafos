@@ -11,6 +11,7 @@ Os arquivos estão em ordem de leitura. Quem chega agora (pessoa ou Claude) deve
 | [04-arquitetura.md](04-arquitetura.md) | Estrutura do código, donos dos módulos, contrato do grafo, tecnologias, como rodar |
 | [05-equipe-e-cronograma.md](05-equipe-e-cronograma.md) | Quem faz o quê, prazos e convenções do relatório e dos slides |
 | [06-resultados-oficiais.md](06-resultados-oficiais.md) | Números oficiais: a única fonte para citar no relatório e nos slides |
+| [estado.md](estado.md) | Estado atual de cada etapa: atualizado antes de cada commit |
 | [glossario.md](glossario.md) | Termos de grafos e de avaliação usados no trabalho |
 | [planos/plano-v3.html](planos/plano-v3.html) | Plano de ação final (fonte destas páginas) |
 | [planos/plano-v2.html](planos/plano-v2.html) | Análise técnica completa, com gráficos interativos (anexo) |

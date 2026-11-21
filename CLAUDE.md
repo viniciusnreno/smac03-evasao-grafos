@@ -2,7 +2,16 @@
 
 Trabalho de SMAC03 (Grafos, UNIFEI 2026/2), Cenário 3: evasão estudantil modelada como grafos, com o dataset UCI 697. Entrega em **22/11/2026, 23h59**: relatório de até 9 páginas, slides e este código.
 
-Antes de qualquer tarefa, leia [docs/README.md](docs/README.md). O mínimo é [docs/03-modelagem.md](docs/03-modelagem.md) e [docs/04-arquitetura.md](docs/04-arquitetura.md).
+Antes de qualquer tarefa, leia [docs/README.md](docs/README.md). O mínimo é [docs/03-modelagem.md](docs/03-modelagem.md), [docs/04-arquitetura.md](docs/04-arquitetura.md) e [docs/estado.md](docs/estado.md).
+
+## Como trabalhar nas sessões
+
+1. **Início de sessão.** Na primeira resposta de cada sessão, leia [docs/estado.md](docs/estado.md) e traga:
+   - um resumo do projeto em 2 ou 3 linhas;
+   - o estado atual em tabela (etapa, responsável, prazo, status), com as etapas pendentes, em andamento e bloqueadas;
+   - o que vence a seguir.
+2. **Antes de cada commit.** Atualize [docs/estado.md](docs/estado.md): mude o status da etapa para `concluída` (ou `em andamento`) e escreva um resumo de uma linha. Inclua essa alteração no mesmo commit. Se a tarefa não estiver na tabela, adicione uma linha.
+3. **Estilo das respostas.** Linguagem clara, sucinta e objetiva, em português. Resposta primeiro, contexto depois. Use tabelas quando houver comparação ou lista de itens. Termine as respostas com uma seção **"Resumo executivo"** em linguagem simples, citando os nomes dos algoritmos envolvidos.
 
 ## O projeto em 5 linhas
 
