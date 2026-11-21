@@ -153,9 +153,11 @@ class ClassificadorCorteMinimo:
 
     Parâmetros:
         lam: peso do viés. Cada aluno sem rótulo ganha os arcos
-            S -> u com capacidade lam·p e u -> T com lam·(1 - p), em que
-            p é a taxa de evasão do treino. Como p < 0,5, o viés puxa
-            para o lado de T. ``lam=0`` desliga o viés.
+            u -> T com capacidade lam·q e S -> u com lam·(1 - q), em que
+            q é a taxa de evasão do treino (plano v2). Como q < 0,5, o
+            viés puxa para o lado de S (evasão), compensando a classe
+            minoritária e aumentando o recall da evasão. ``lam=0``
+            desliga o viés.
         contrair: funde os rotulados em S e T antes do fluxo. Não muda
             o corte e reduz muito a rede (3.630 alunos com k = 25: 728
             vértices, ~0,2 s). ``contrair=False`` serve só para
@@ -246,8 +248,8 @@ class ClassificadorCorteMinimo:
         if self.lam > 0:
             p = sum(rotulos_treino.values()) / len(rotulos_treino)
             for u in idx_teste:
-                somar(FONTE, u, self.lam * p)
-                somar(u, SUMIDOURO, self.lam * (1 - p))
+                somar(u, SUMIDOURO, self.lam * p)
+                somar(FONTE, u, self.lam * (1 - p))
 
         rede = Grafo(dirigido=True)
         rede.adicionar_vertice(FONTE)
