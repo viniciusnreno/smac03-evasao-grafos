@@ -68,7 +68,7 @@ Atributos: `nome`, `descricao` (texto para a interface) e `grafo` (preenchido po
 
 | Modelo | `construir` | `executar` | `destaques` |
 |---|---|---|---|
-| G1 `GrafoSimilaridade` | kNN de Gower | chama `CorteMinimo` (Edmonds–Karp) | arestas do corte, alunos de cada lado |
+| G1 `GrafoSimilaridade` | kNN de Gower | chama `ClassificadorCorteMinimo` (Edmonds–Karp) | arestas do corte, alunos de cada lado |
 | G2 `ArvoreDependencias` | grafo completo de informação mútua | Kruskal | arestas da árvore, vizinhos do Desfecho |
 | G3 `DagTrajetorias` | DAG de estados | Kahn + Bellman-Ford | trajetória de maior risco |
 
@@ -85,13 +85,18 @@ for modelo in modelos:
 
 ```python
 GrafoSimilaridade(momento, k, pesos=None).construir(base) -> Grafo
-CorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) -> dict[int, bool]
+ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) -> dict[int, bool]
 #   rotulos_treino: dict[int, bool]   idx_teste: lista de vértices sem rótulo
 ```
 
-- `CorteMinimo` é classe de algoritmo, não modelo; `GrafoSimilaridade.executar()` a chama.
+- `corte_minimo.py` tem duas classes de algoritmo, que não são modelos:
+  - `EdmondsKarp`: fluxo máximo genérico. `fluxo_maximo(rede, s, t) -> float` e `lado_da_fonte() -> set` (corte mínimo por BFS no residual). Não altera a rede recebida.
+  - `ClassificadorCorteMinimo(lam=1.0, contrair=True)`: monta a rede do G1 com S e T, chama o `EdmondsKarp` e traduz o corte em previsões. Depois de `classificar`, expõe `fluxo`, `num_caminhos`, `lado_evasao` e `arestas_cortadas()` (para `destaques`).
+- `GrafoSimilaridade.executar()` usa o `ClassificadorCorteMinimo`.
+- **Viés λ:** cada aluno sem rótulo ganha S → u com capacidade λ·p e u → T com λ·(1 − p), sendo p a taxa de evasão do treino. Como p < 0,5, o viés puxa para T. Essa é a nossa leitura do plano v2, que não define p; `lam=0` desliga o viés.
+- **Contração:** com `contrair=True` (padrão), os rotulados são fundidos em S e T antes do fluxo, o que não muda o corte e reduz a rede.
 - No G1, vértice = posição do aluno no DataFrame filtrado (após remover `Enrolled` e `reset_index`), de 0 a 3.629. No G2 e no G3, vértices são `str`.
-- Os terminais S e T são criados dentro de `CorteMinimo`, não no grafo recebido.
+- Os terminais S e T são criados dentro de `ClassificadorCorteMinimo`, não no grafo recebido.
 - **Rótulos:** `True` = evadiu (`Dropout`), `False` = formou (`Graduate`).
 - O que for específico de um modelo volta no dict de `executar()`. Não crie métodos abstratos novos sem combinar.
 - Parâmetros novos (como o viés λ) entram como argumentos opcionais com valor padrão. Hiperparâmetros vão no `__init__`.
@@ -108,7 +113,7 @@ CorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) -> dict[int, 
 | `modelo.py` | `ModeloGrafo` (abstrata) | Interface comum dos modelos |
 | `dados.py` | `BaseDeDados` | Carrega, filtra os Enrolled, separa 80/20 e entrega os atributos de cada momento |
 | `grafo_similaridade.py` | `GrafoSimilaridade(ModeloGrafo)` | G1: Gower e kNN; executa o corte mínimo |
-| `corte_minimo.py` | `CorteMinimo` | Edmonds–Karp e classificação pelo corte (`classificar`) |
+| `corte_minimo.py` | `EdmondsKarp` e `ClassificadorCorteMinimo` | Fluxo máximo; classificação pelo corte (`classificar`) |
 | `arvore_dependencias.py` | `ArvoreDependencias(ModeloGrafo)` | Kruskal com union-find sobre a informação mútua |
 | `dag_trajetorias.py` | `DagTrajetorias(ModeloGrafo)` | Monta o DAG, ordena com Kahn e busca caminhos com Bellman-Ford |
 | `avaliacao.py` | `Avaliador` | CV, teste, bootstrap, McNemar com Holm, ablação |
@@ -119,7 +124,7 @@ Os métodos de `Grafo`, `ModeloGrafo` e da fronteira do G1 estão fixados acima.
 
 **Lógica separada da interface.** As classes devolvem dados; não imprimem, não plotam e não gravam arquivos fora da própria responsabilidade (só `GeradorFiguras` e `Pipeline` escrevem em disco). Assim, a interface gráfica prevista como bônus pode reaproveitar as mesmas classes sem mudar o núcleo. Quando ela existir, ficará em um módulo próprio e o `main.py` poderá abri-la.
 
-Métodos auxiliares internos começam com `_` (ex.: `_bfs_residual`).
+Métodos auxiliares internos começam com `_` (ex.: `_bfs`).
 
 ## Como rodar
 

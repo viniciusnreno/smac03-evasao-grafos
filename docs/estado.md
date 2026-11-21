@@ -12,7 +12,7 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | 3a | `grafo.py` (`Grafo`) e `modelo.py` (`ModeloGrafo`): base comum | Rafael | Sáb 21/11, 17h | concluída | `Grafo` implementado (dirigido ou não, vizinhos só leitura, conversão para networkx) e conferido contra o networkx |
 | 4 | `dados.py`: carga, filtro Enrolled, split 80/20, momentos | Carlos | Sáb 21/11, 19h | pendente | |
 | 5 | `grafo_similaridade.py`: Gower + kNN | Carlos | Sáb 21/11, 19h | pendente | |
-| 6 | `corte_minimo.py`: Edmonds–Karp próprio + corte por BFS | Rafael | Sáb 21/11, 19h | pendente | |
+| 6 | `corte_minimo.py`: Edmonds–Karp próprio + corte por BFS | Rafael | Sáb 21/11, 19h | concluída | Classes `EdmondsKarp` e `ClassificadorCorteMinimo`; conferidas contra o networkx (300 redes + 100 classificações); 0,2 s na escala real. Falta integrar com o G1 |
 | 7 | `arvore_dependencias.py`: Kruskal + union-find | Carlos | Sáb 21/11, 21h | pendente | |
 | 8 | `dag_trajetorias.py`: Kahn + Bellman-Ford | Carlos | Sáb 21/11, 21h | pendente | |
 | 9 | `main.py`: pipeline grava em `outputs/` | Carlos | Sáb 21/11, 21h | pendente | |

@@ -58,12 +58,12 @@ class DagTrajetorias(ModeloGrafo)       # G3 · Carlos (Kahn + Bellman-Ford)
 
 # Fronteira Carlos ↔ Rafael (G1)
 GrafoSimilaridade(momento, k, pesos=None).construir(base) -> Grafo
-CorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) -> dict[int, bool]
+ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) -> dict[int, bool]
 ```
 
-- `CorteMinimo` é classe de algoritmo, não modelo; `GrafoSimilaridade.executar()` a chama.
+- `corte_minimo.py` tem duas classes de algoritmo (não são modelos): `EdmondsKarp`, fluxo máximo genérico, e `ClassificadorCorteMinimo`, que monta a rede com S e T e chama o `EdmondsKarp`. `GrafoSimilaridade.executar()` usa o classificador.
 - No G1, vértice = posição do aluno no DataFrame após remover `Enrolled` e `reset_index`. No G2 e no G3, vértices são `str` (atributos e estados).
-- S e T são criados dentro de `CorteMinimo`, não no grafo recebido.
+- S e T são criados dentro de `ClassificadorCorteMinimo`, não no grafo recebido.
 - Rótulo `True` = evadiu, `False` = formou.
 - Tudo o que for específico de um modelo (previsões, métricas) volta no dict de `executar()`; não crie métodos abstratos novos sem combinar.
 - Parâmetros novos entram como argumentos opcionais, sem quebrar as assinaturas.
@@ -85,7 +85,7 @@ python src/main.py          # pipeline completo, grava em outputs/
 - **PEP 8 sempre**: 4 espaços, linhas de até 79 caracteres, `snake_case` para funções, métodos e variáveis, `CamelCase` para classes, `MAIUSCULAS` para constantes, imports no topo (padrão, terceiros, locais).
 - **Orientação a objetos**: cada módulo de `src/` expõe uma classe principal com métodos bem definidos (tabela em [docs/04-arquitetura.md](docs/04-arquitetura.md)). Os três modelos herdam de `ModeloGrafo` (`abc.ABC`). Hiperparâmetros entram no `__init__`; os dados entram nos métodos.
 - **Lógica separada da interface**: as classes não imprimem, não plotam e não leem arquivos fora do que é a responsabilidade delas. Elas devolvem dados. Isso permite que uma interface gráfica (bônus, fase futura) use as mesmas classes que o pipeline.
-- Métodos auxiliares internos começam com `_` (ex.: `_bfs_residual`).
+- Métodos auxiliares internos começam com `_` (ex.: `_bfs`).
 
 ## Convenções
 
