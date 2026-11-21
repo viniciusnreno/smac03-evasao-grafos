@@ -9,7 +9,7 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | 1 | Migrar o repositório para a estrutura do v3 | Rafael | Sáb 21/11 | concluída | Código v1 removido, esqueletos em `src/`, planos em `docs/planos/` |
 | 2 | `CLAUDE.md` e documentação em `docs/` | Rafael | Sáb 21/11 | concluída | Regras, donos, contrato do grafo, PEP 8 + OO, interface comum (`Grafo`, `ModeloGrafo`), regras de sessão, 8 páginas de contexto e README |
 | 3 | Subir `analise_v2/` (fonte dos números oficiais) | a definir | Sáb 21/11 | bloqueada | Pasta não está no repositório; descobrir quem tem |
-| 3a | `grafo.py` (`Grafo`) e `modelo.py` (`ModeloGrafo`): base comum, fazer primeiro | a definir: Carlos ou Rafael | Sáb 21/11, 17h | pendente | Esqueletos criados; falta implementar `Grafo` |
+| 3a | `grafo.py` (`Grafo`) e `modelo.py` (`ModeloGrafo`): base comum | Rafael | Sáb 21/11, 17h | concluída | `Grafo` implementado (dirigido ou não, vizinhos só leitura, conversão para networkx) e conferido contra o networkx |
 | 4 | `dados.py`: carga, filtro Enrolled, split 80/20, momentos | Carlos | Sáb 21/11, 19h | pendente | |
 | 5 | `grafo_similaridade.py`: Gower + kNN | Carlos | Sáb 21/11, 19h | pendente | |
 | 6 | `corte_minimo.py`: Edmonds–Karp próprio + corte por BFS | Rafael | Sáb 21/11, 19h | pendente | |
