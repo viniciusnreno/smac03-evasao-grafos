@@ -190,6 +190,37 @@ class GrafoSimilaridade(ModeloGrafo):
         pi, pj = self._posicao[i], self._posicao[j]
         return float(self._distancias(np.array([pi]))[0, pj])
 
+    def assortatividade(self,
+                        rotulos: Mapping[int, bool] | None = None) -> float:
+        """Assortatividade de Newman (2003) do desfecho no grafo.
+
+        r = (soma_i e_ii - soma_i a_i²) / (1 - soma_i a_i²), em que
+        e_ij é a fração de pontas de aresta que ligam a classe i à j e
+        a_i = soma_j e_ij. Arestas sem peso; só entram as arestas com as
+        duas pontas rotuladas. r > 0: alunos parecidos têm o mesmo
+        desfecho com mais frequência que o acaso.
+
+        Args:
+            rotulos: ``{aluno: evadiu}``; padrão ``rotulos_`` (treino).
+                Rótulos embaralhados servem ao teste de permutação.
+        """
+        if self.grafo is None:
+            raise RuntimeError("chame construir antes")
+        rotulos = self.rotulos_ if rotulos is None else rotulos
+        e = np.zeros((2, 2))
+        for u, v, _ in self.grafo.arestas():
+            if u in rotulos and v in rotulos:
+                a, b = int(rotulos[u]), int(rotulos[v])
+                e[a, b] += 1
+                e[b, a] += 1
+        if e.sum() == 0:
+            raise ValueError("nenhuma aresta entre alunos rotulados")
+        e /= e.sum()
+        esperado = float((e.sum(axis=1) ** 2).sum())
+        if esperado == 1.0:
+            raise ValueError("todos os rótulos são iguais")
+        return (float(np.trace(e)) - esperado) / (1.0 - esperado)
+
     # ------------------------------------------------------------------
     # Auxiliares
     # ------------------------------------------------------------------
@@ -233,6 +264,17 @@ class GrafoSimilaridade(ModeloGrafo):
         (0,381 e 0,474 bits), a mensalidade (0,149), o curso (0,090), a
         bolsa (0,083) e os atributos binários.
         """
+        codigos = GrafoSimilaridade.discretizar(serie)
+        return float(mutual_info_score(np.asarray(y, dtype=int), codigos)
+                     / np.log(2))
+
+    @staticmethod
+    def discretizar(serie: pd.Series) -> np.ndarray:
+        """Códigos inteiros das faixas do atributo (base da IM).
+
+        Mesmas regras de ``informacao_mutua``; usado também pelo G2
+        (``ArvoreDependencias``) para a IM entre pares de atributos.
+        """
         if serie.name in DERIVADOS:
             serie = pd.Series(faixa_aprovacao(serie))
         elif serie.name in NOMINAIS:
@@ -242,8 +284,7 @@ class GrafoSimilaridade(ModeloGrafo):
         elif serie.nunique() > MAX_VALORES_DISCRETOS:
             serie = pd.qcut(serie, NUM_QUANTIS, duplicates="drop")
         codigos, _ = pd.factorize(serie, use_na_sentinel=False)
-        return float(mutual_info_score(np.asarray(y, dtype=int), codigos)
-                     / np.log(2))
+        return codigos
 
     def _preparar(self, base, idx_treino: list[int], idx_teste: list[int],
                   colunas: list[str], pesos: dict[str, float]) -> None:

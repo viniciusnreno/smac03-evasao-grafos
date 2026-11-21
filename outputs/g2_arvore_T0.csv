@@ -1,0 +1,25 @@
+u,v,im_bits,toca_desfecho,estabilidade,no_teste
+GDP,Unemployment rate,3.3087113745534693,False,1.0,True
+GDP,Inflation rate,3.1151006505671273,False,0.83,True
+Father's occupation,Mother's occupation,0.6622158344759322,False,1.0,True
+Age at enrollment,Application mode,0.5934841920840828,False,1.0,True
+Mother's occupation,Mother's qualification,0.5508364871036804,False,1.0,True
+Father's qualification,Mother's qualification,0.5286838330617147,False,1.0,True
+Application mode,Previous qualification,0.515235823506999,False,1.0,True
+Course,Daytime/evening attendance,0.5128253921642563,False,1.0,True
+Application mode,Course,0.3131816199507805,False,1.0,True
+Admission grade,Previous qualification (grade),0.3098649940792708,False,1.0,True
+Age at enrollment,Marital status,0.2104776327433547,False,1.0,True
+Application mode,Application order,0.17687043780278008,False,0.99,False
+GDP,Mother's occupation,0.16047161752157824,False,0.47,False
+International,Nacionality,0.16021290504248248,False,1.0,True
+Desfecho,Tuition fees up to date,0.14899269597953668,True,1.0,True
+Course,Mother's occupation,0.13820420504540493,False,0.49,False
+Course,Gender,0.13170993501715303,False,1.0,True
+Application mode,Displaced,0.12330736971593657,False,0.75,False
+Debtor,Tuition fees up to date,0.10511105330024215,False,1.0,True
+Course,Desfecho,0.08987780352953115,True,0.86,True
+Desfecho,Scholarship holder,0.08290896114515724,True,0.99,True
+Admission grade,Application mode,0.08272616366530461,False,0.32,False
+Application mode,International,0.019447373948928117,False,0.46,True
+Educational special needs,GDP,0.0072223012153754765,False,0.35,True
