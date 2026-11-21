@@ -125,6 +125,31 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 - **Rótulos:** `True` = evadiu (`Dropout`), `False` = formou (`Graduate`).
 - O que for específico de um modelo volta no dict de `executar()`. Não crie métodos abstratos novos sem combinar.
 - Parâmetros novos (como o viés λ) entram como argumentos opcionais com valor padrão. Hiperparâmetros vão no `__init__`.
+- `GrafoSimilaridade.discretizar(serie)` devolve os códigos das faixas usadas na IM. O G2 usa as mesmas faixas.
+- `GrafoSimilaridade.assortatividade(rotulos=None)` calcula a assortatividade de Newman do desfecho, sem peso nas arestas, só entre vértices rotulados. Rótulos embaralhados servem ao teste de permutação. Confere com o networkx.
+
+**`ArvoreDependencias(momento, incluir_derivados=True, excluir=())` (G2):**
+
+- `construir(base, idx=None)`: grafo completo com vértices = atributos do momento + `"Desfecho"` (25 / 32 / 39 vértices) e peso = IM em bits, calculada nos alunos `idx` (padrão: treino).
+- `executar()`: Kruskal decrescente com `UniaoBusca` (união por posto e compressão de caminho). Devolve `arestas` (u, v, im), `peso_total`, `vizinhos_desfecho`, `im_desfecho`.
+- `ArvoreDependencias.kruskal(grafo, maximo=True)`: Kruskal genérico. Empates são desfeitos pelo nome dos vértices.
+- `estabilidade(base, n=100)`: fração dos bootstraps do treino em que cada aresta volta. `sobreposicao(a, b)`: fração das arestas de `a` presentes em `b`.
+- **Empates exatos:** PIB, desemprego e inflação têm um valor por coorte, e `International` equivale a `Nacionality`. Por isso, mais de uma árvore máxima é possível. O assert contra o networkx compara o peso total e a lista de pesos, não o conjunto de arestas.
+
+**`Pipeline` (`main.py`):** `Pipeline(saida, momentos, n_bootstrap_arvore=100, n_permutacoes=200, verificar=True, progresso=None).executar() -> dict`. Não imprime: as mensagens vão para `progresso` (`print` na linha de comando). Leva cerca de 3 minutos.
+
+| Arquivo em `outputs/` | Conteúdo | Usado em |
+|---|---|---|
+| `split.csv` | aluno e conjunto (treino ou teste) | reprodutibilidade |
+| `hiperparametros.json` | parâmetros do protocolo | Tab. 2 |
+| `g1_previsoes_teste.csv` | aluno, desfecho real, previsão em T0/T1/T2 | `Avaliador` (bootstrap, McNemar) |
+| `g1_metricas_teste.csv` | acurácia balanceada, recall, especificidade, precisão, F1, VP/FP/FN/VN; corte mínimo e classe majoritária | Tab. 3 |
+| `g1_assortatividade.csv` | r de Newman, p da permutação, máximo nulo | H5 |
+| `g2_arvore_T*.csv` | arestas da árvore com IM, estabilidade e presença na árvore do teste | Fig. 5, H2 |
+| `g2_im_desfecho.csv` | IM de cada atributo com o desfecho por momento | H1 |
+| `resultados.json` | tudo acima, mais fluxo, caminhos aumentantes e pesos do G1 | relatório e slides |
+
+O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A integração supõe `DagTrajetorias(momento)` e uma chave opcional `previsoes` no `executar()`, como no G1. Se a assinatura for outra, combine com o Carlos.
 
 **G3 (`dag_trajetorias.py`).** Três classes:
 

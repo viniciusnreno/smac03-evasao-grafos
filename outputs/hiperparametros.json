@@ -1,0 +1,34 @@
+{
+  "divisao": {
+    "treino": 0.8,
+    "teste": 0.2,
+    "estratificada": true,
+    "semente": 42
+  },
+  "dobras_cv_treino": 5,
+  "g1": {
+    "k": {
+      "T0": 25,
+      "T1": 25,
+      "T2": 40
+    },
+    "lam": 1.0,
+    "pesos_atributos": "informação mútua com o desfecho (treino)",
+    "capacidade": "c(i,j) = 1 - d_Gower(i,j)",
+    "taxas_derivadas": true
+  },
+  "assortatividade": {
+    "k": 10,
+    "pesos": "iguais",
+    "permutacoes": 200
+  },
+  "g2": {
+    "peso": "informação mútua (bits, treino)",
+    "algoritmo": "Kruskal decrescente + union-find",
+    "bootstrap_estabilidade": 100
+  },
+  "avaliacao": {
+    "bootstrap_ic95": 1000,
+    "splits_robustez": 10
+  }
+}
