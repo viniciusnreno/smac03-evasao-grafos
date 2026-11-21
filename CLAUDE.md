@@ -37,8 +37,8 @@ Edite só os arquivos da pessoa que pediu a tarefa. Para mexer em arquivo de out
 
 | Arquivo | Dono |
 |---|---|
-| `src/grafo.py`, `modelo.py` (base comum) | Rafael |
-| `src/dados.py`, `grafo_similaridade.py`, `arvore_dependencias.py`, `dag_trajetorias.py`, `main.py` | Carlos |
+| `src/grafo.py`, `modelo.py` (base comum), `dados.py` | Rafael |
+| `src/grafo_similaridade.py`, `arvore_dependencias.py`, `dag_trajetorias.py`, `main.py` | Carlos |
 | `src/corte_minimo.py`, `avaliacao.py`, `figuras.py` | Rafael |
 | `relatorio/main.tex`, `configuracao.tex`, capa, `referencias.bib`, seções 1, 2 e 5 | Nathan |
 | `relatorio/elemtextuais/3-Desenvolvimento.tex` | 3.1 Vinícius · 3.2 Carlos |

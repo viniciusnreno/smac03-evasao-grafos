@@ -21,7 +21,7 @@ data/data.csv                dataset UCI 697
 src/
 ├── grafo.py                 classe Grafo: estrutura comum (base)                         (Rafael)
 ├── modelo.py                classe abstrata ModeloGrafo (base)                           (Rafael)
-├── dados.py                 carga, filtro Enrolled, split 80/20, atributos por momento   (Carlos)
+├── dados.py                 carga, filtro Enrolled, split 80/20, atributos por momento   (Rafael)
 ├── grafo_similaridade.py    Gower + kNN (G1)                                            (Carlos)
 ├── corte_minimo.py          Edmonds–Karp próprio e classificação pelo corte (G1)        (Rafael)
 ├── arvore_dependencias.py   Kruskal + union-find, árvore máxima de IM (G2)              (Carlos)
@@ -80,6 +80,23 @@ for modelo in modelos:
     resultado = modelo.executar()
     desenhar(modelo.grafo, modelo.destaques())
 ```
+
+**`BaseDeDados` (`dados.py`).** Criada com `BaseDeDados()`: lê o CSV, remove os Enrolled, numera os alunos de 0 a 3.629 e faz a divisão oficial.
+
+| Membro | Devolve |
+|---|---|
+| `dados` | DataFrame com os 36 atributos, `taxa_aprov_s1`, `taxa_aprov_s2`, `Target` e `evadiu` (True = Dropout) |
+| `idx_treino`, `idx_teste` | posições dos alunos (2.904 e 726), ordenadas |
+| `atributos(momento, incluir_derivados=False)` | colunas de `"T0"` (24), `"T1"` (30) ou `"T2"` (36); com derivados, + taxa de aprovação dos semestres disponíveis |
+| `X(idx, momento, incluir_derivados=False)` | DataFrame dos atributos do momento para os alunos `idx` |
+| `y(idx)` | array booleano do desfecho |
+| `rotulos(idx)` | `{aluno: evadiu}`, o formato do `ClassificadorCorteMinimo` |
+| `taxa_evasao(idx=None)` | fração de evadidos |
+| `dividir(semente)` | nova divisão estratificada (para os 10 splits de robustez) |
+
+Constantes do módulo: `GRUPOS` (os 7 grupos de atributos, usados na ablação), `MOMENTOS`, `DERIVADOS` e `NOMINAIS` (códigos sem ordem, comparados por igualdade na distância de Gower; os demais são numéricos ou 0/1). Taxa de aprovação com 0 inscritas fica `NaN`: é a faixa "sem inscrição", tratada por quem usa a base.
+
+A divisão com semente 42 reproduz os números de `analise_v2` no treino (0% de aprovação no S1: n = 387, 99,5% de evasão; mensalidade atrasada: n = 383, 94,0%).
 
 **Fronteira Carlos ↔ Rafael (G1):**
 
