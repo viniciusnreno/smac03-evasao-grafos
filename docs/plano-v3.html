@@ -1,0 +1,582 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Plano v3 (final) · Evasão em grafos · divisão de tarefas</title><style>:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface-1:#fcfcfb; --surface-2:#f3f2ee;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s7:#6250d6;
+  --up:#e34948; --down:#2a78d6; --mid:#f0efec; --neutral:#a9a8a1;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-text:#006300;
+  --code:#f0efe9;
+  --accent-wash:rgba(42,120,214,0.08); --up-wash:rgba(227,73,72,0.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19; --surface-2:#232321;
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s7:#9085e9;
+    --up:#e66767; --down:#3987e5; --mid:#383835; --neutral:#6b6a64;
+    --good-text:#0ca30c; --code:#232321;
+    --accent-wash:rgba(57,135,229,0.12); --up-wash:rgba(230,103,103,0.12);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface-1:#1a1a19; --surface-2:#232321;
+  --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s7:#9085e9;
+  --up:#e66767; --down:#3987e5; --mid:#383835; --neutral:#6b6a64;
+  --good-text:#0ca30c; --code:#232321;
+  --accent-wash:rgba(57,135,229,0.12); --up-wash:rgba(230,103,103,0.12);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--text-primary);
+  font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--s1)}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:12px 14px;border-radius:8px;overflow:auto;font-size:13px;line-height:1.5}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;min-height:100vh}
+nav.toc{position:sticky;top:0;height:100vh;overflow:auto;padding:22px 16px;border-right:1px solid var(--border);background:var(--surface-1);font-size:13px}
+nav.toc .brand{font-weight:650;font-size:14px;margin-bottom:4px}
+nav.toc .sub{color:var(--text-muted);font-size:12px;margin-bottom:14px}
+nav.toc a{display:block;color:var(--text-secondary);text-decoration:none;padding:4px 8px;border-radius:6px}
+nav.toc a:hover{background:var(--surface-2);color:var(--text-primary)}
+nav.toc a.l2{padding-left:20px;font-size:12.5px}
+nav.toc .tbtn{margin-top:14px}
+main{padding:28px 40px 80px;max-width:1180px}
+header.hero{padding:8px 0 18px;border-bottom:1px solid var(--border);margin-bottom:22px}
+header.hero h1{font-size:28px;line-height:1.25;margin:6px 0 8px;letter-spacing:-.01em}
+header.hero .kicker{color:var(--text-muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.06em}
+header.hero p.lead{color:var(--text-secondary);font-size:16px;max-width:900px;margin:6px 0 0}
+section{margin:40px 0 0;scroll-margin-top:16px}
+section > h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+section > .sec-lead{color:var(--text-secondary);margin:0 0 16px;max-width:920px}
+h3{font-size:17px;margin:26px 0 8px}
+h4{font-size:14.5px;margin:18px 0 6px}
+p{margin:8px 0}
+.muted{color:var(--text-muted)} .sec{color:var(--text-secondary)}
+.small{font-size:13px}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:14px 0}
+.card h4:first-child,.card h3:first-child{margin-top:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.grid3,.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.layout{grid-template-columns:1fr} nav.toc{position:static;height:auto} main{padding:20px} .grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.kpi .label{color:var(--text-secondary);font-size:12.5px}
+.kpi .value{font-size:28px;font-weight:600;line-height:1.2;margin-top:2px}
+.kpi .note{color:var(--text-muted);font-size:12px;margin-top:2px}
+.hero-fig{font-size:52px;font-weight:600;line-height:1}
+.pill{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);color:var(--text-secondary);background:var(--surface-2);white-space:nowrap}
+.pill.ok::before{content:"✓ ";color:var(--good-text);font-weight:700}
+.pill.no::before{content:"✕ ";color:var(--crit);font-weight:700}
+.pill.warn::before{content:"! ";color:#b07800;font-weight:800}
+.callout{border-left:3px solid var(--s1);background:var(--accent-wash);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.callout.risk{border-left-color:var(--up);background:var(--up-wash)}
+.callout > b:first-child{display:block;margin-bottom:2px}
+table.t{border-collapse:collapse;width:100%;font-size:13.2px;margin:8px 0}
+table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+table.t th{color:var(--text-secondary);font-weight:600;font-size:12.5px;background:var(--surface-2);position:sticky;top:0}
+table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tr:hover td{background:var(--surface-2)}
+.tablewrap{max-height:460px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chart-title{font-weight:600;font-size:14.5px}
+.chart-sub{color:var(--text-secondary);font-size:12.5px;margin-top:1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--text-secondary);margin:8px 0 4px}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.legend .ln{width:16px;height:2px;display:inline-block}
+.legend .dt{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px var(--surface-1)}
+.btn{font:inherit;font-size:12px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer}
+.btn:hover{color:var(--text-primary)}
+.btn[aria-pressed="true"]{background:var(--text-primary);color:var(--surface-1)}
+.seg{display:inline-flex;gap:4px;flex-wrap:wrap}
+.tip{position:fixed;pointer-events:none;z-index:50;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border);box-shadow:0 6px 24px rgba(0,0,0,.14);border-radius:8px;padding:8px 10px;font-size:12.5px;max-width:340px;opacity:0;transition:opacity .08s}
+.tip .tv{font-weight:650;font-size:14px}
+.tip .tl{color:var(--text-secondary)}
+.tip .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+svg text{fill:var(--text-secondary);font-size:11.5px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+svg .tick text{fill:var(--text-muted);font-variant-numeric:tabular-nums}
+svg .gridline{stroke:var(--grid);stroke-width:1}
+svg .baseline{stroke:var(--axis);stroke-width:1}
+svg .hit{fill:transparent;cursor:default}
+svg .mark:hover,svg .mark.hl{filter:brightness(1.08)}
+svg .lbl-strong{fill:var(--text-primary);font-weight:600}
+details{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:8px 14px;margin:10px 0}
+details>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--text-secondary)}
+details[open]>summary{margin-bottom:8px}
+.steps{counter-reset:st;list-style:none;padding:0;margin:8px 0}
+.steps>li{counter-increment:st;position:relative;padding:6px 0 6px 38px}
+.steps>li::before{content:counter(st);position:absolute;left:0;top:6px;width:26px;height:26px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:650;color:var(--text-secondary)}
+.flow{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.flow .box{flex:1 1 150px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px}
+.flow .box b{display:block;font-size:13.5px}
+.flow .arrow{align-self:center;color:var(--text-muted);font-size:18px}
+.tag{font-size:11px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
+ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:2px 0}
+.verdict{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-1);margin:8px 0}
+.verdict .ic{font-weight:800;font-size:16px;line-height:1.3;width:20px;text-align:center}
+.verdict.ok .ic{color:var(--good-text)} .verdict.no .ic{color:var(--crit)} .verdict.part .ic{color:#b07800}
+@media print{nav.toc{display:none}.layout{display:block}main{max-width:none}}
+ul.check{list-style:none;padding:0;margin:8px 0}
+ul.check li{display:flex;gap:10px;align-items:flex-start;padding:7px 4px;border-bottom:1px solid var(--grid);font-size:13.5px}
+ul.check li:last-child{border-bottom:0}
+ul.check input{margin-top:3px;width:16px;height:16px;flex:0 0 auto;accent-color:var(--s1);cursor:pointer}
+ul.check li.done span.txt{color:var(--text-muted);text-decoration:line-through}
+.pill.prog{font-variant-numeric:tabular-nums;vertical-align:middle;margin-left:6px}
+pre.copy{position:relative;white-space:pre}
+.copybtn{position:absolute;top:6px;right:6px}
+.seg-bar{display:flex;gap:2px;height:28px}
+.seg-bar>div{border-radius:4px;font-size:12px;font-weight:600;display:flex;align-items:center;padding-left:8px;white-space:nowrap;overflow:hidden}
+:root{--s4:#eda100;--s5:#e87ba4;--s6:#008300}
+.tablewrap{max-height:none}
+</style></head><body><div class="layout">
+<nav class="toc" aria-label="Sumário">
+  <div class="brand">Plano v3 · versão final</div>
+  <div class="sub">SMAC03 · Cenário 3 · plano de ação</div>
+  <a href="#uso">Como usar esta página</a>
+  <a href="#licoes">Lições do trabalho de referência (7/8)</a>
+  <a href="#enxuto">O que foi enxugado</a>
+  <a href="#numeros">Números oficiais (fonte única)</a>
+  <a href="#relatorio">O relatório página a página</a>
+  <a href="#pessoas">Quem faz o quê</a>
+  <a class="l2" href="#p-nathan">Nathan · Coordenador</a>
+  <a class="l2" href="#p-vinicius">Vinícius · Modelador</a>
+  <a class="l2" href="#p-carlos">Carlos · Dev A</a>
+  <a class="l2" href="#p-rafael">Rafael · Dev B</a>
+  <a href="#cronograma">Cronograma e pontos de junção</a>
+  <a href="#juntar">Como juntar no final</a>
+  <a href="#latex">LaTeX pronto para colar</a>
+  <a href="#slides">Apresentação (15 min)</a>
+  <a href="#checklist">Checklist antes de enviar</a>
+  <div class="tbtn"><button class="btn" id="themeBtn" type="button">Alternar tema claro/escuro</button></div>
+  <div class="tbtn"><button class="btn" id="resetBtn" type="button">Limpar minhas marcações</button></div>
+</nav>
+<main>
+<header class="hero">
+  <div class="kicker">SMAC03 · Grafos · Cenário 3 · Plano de ação v3 (final) · 21/11/2026</div>
+  <h1>Plano de ação final: cada um faz a sua parte, e juntamos no domingo</h1>
+  <p class="lead">Esta é a versão <b>enxuta e definitiva</b>. A análise técnica completa (gráficos, ablação, testes) continua no <a href="Plano%20v2%20-%20Evas%C3%A3o%20em%20Grafos%20(80-20%2C%20abla%C3%A7%C3%A3o%2C%20algoritmos%20de%20aula).html">Plano v2</a>, que funciona como anexo técnico. Aqui ficam só as decisões finais, as lições do trabalho de referência (nota 7/8), os números oficiais, o relatório página a página e a parte de cada pessoa.</p>
+</header>
+
+<section id="uso">
+  <div class="grid4">
+    <div class="kpi"><div class="label">Prazo SIGAA</div><div class="value">22/11, 23h59</div><div class="note">meta interna: enviar até 22h</div></div>
+    <div class="kpi"><div class="label">Páginas</div><div class="value">≤ 9</div><div class="note">com capa e contracapa = 7 de conteúdo</div></div>
+    <div class="kpi"><div class="label">Grafos no relatório</div><div class="value">3</div><div class="note">corte mínimo · árvore de Kruskal · DAG</div></div>
+    <div class="kpi"><div class="label">Equipe</div><div class="value">4</div><div class="note">Modelador B trancou; papéis redistribuídos</div></div>
+  </div>
+  <div class="callout"><b>Como usar</b>Vá direto ao seu cartão em <a href="#pessoas">Quem faz o quê</a> e marque os itens conforme concluir. As marcações ficam salvas <b>no seu navegador</b> e não são compartilhadas. Antes de escrever qualquer número no relatório, copie da tabela de <a href="#numeros">números oficiais</a>. O LaTeX das equações, dos algoritmos e das tabelas já está pronto em <a href="#latex">LaTeX pronto para colar</a>.</div>
+</section>
+
+<section id="licoes">
+  <h2>Lições do trabalho de referência ("Roteamento em RSSF", 2024, nota 7/8)</h2>
+  <p class="sec-lead">É o mesmo professor e a mesma disciplina, e o trabalho usa uma versão anterior do template. Ele mostra o que funciona, porque tirou 7, e o que provavelmente custou o ponto. <b>Atenção:</b> não temos o feedback do professor. As causas do desconto abaixo são <b>inferência nossa</b>, cruzando o PDF com as diretrizes de 2026.</p>
+  <div class="grid2">
+    <div class="card"><h4><span class="pill ok">copiar</span> O que funcionou</h4><ul class="tight small">
+      <li><b>Equação + "onde:"</b> definindo cada símbolo (E<sub>Tx</sub>, E<sub>elec</sub>, k, d). Faremos o mesmo com a distância de Gower e a capacidade das arestas.</li>
+      <li><b>Tabela de parâmetros</b> com parâmetro, símbolo e valor (a "Tabela 2" deles). A nossa equivalente é a <b>tabela de hiperparâmetros</b> (k, λ, pesos, seed, folds).</li>
+      <li><b>Dois algoritmos de aula comparados no mesmo cenário</b> (Dijkstra × Prim). No nosso caso: o corte mínimo comparado à regra isolada e ao DAG, no mesmo split.</li>
+      <li><b>Escala de cores explicada no texto</b> (bateria verde, amarelo, laranja, vermelho). A nossa é a escala de risco azul → cinza → vermelho.</li>
+      <li><b>Link do GitHub no corpo do texto</b>, na seção de solução.</li>
+      <li><b>Algoritmos explicados em linguagem simples</b> (a seção 2.2 deles). Faremos isso com Edmonds–Karp e Kruskal no Referencial.</li>
+      <li>Figuras com legenda e fonte; template de 2 colunas respeitado; referências em formato autor-ano.</li>
+    </ul></div>
+    <div class="card"><h4><span class="pill no">evitar</span> O que provavelmente custou o ponto</h4><ul class="tight small">
+      <li><b>Resultados só qualitativos</b> ("mostrou-se mais robusto"), sem nenhum número nem tabela de comparação. Nós vamos ter a <b>Tabela de resultados com IC 95% e McNemar</b>.</li>
+      <li><b>Introdução de ~1,3 página</b>, com lista genérica de desafios e <b>sem pergunta nem hipótese</b>. As diretrizes de 2026 pedem problema, lacuna, pergunta, hipóteses e objetivos em <b>1 página</b>.</li>
+      <li><b>Meia página com coisas que não são grafo</b> (foto e especificações do sensor). Nós <b>não</b> colocaremos o dicionário das 36 variáveis no PDF; ele vai para o repositório.</li>
+      <li><b>4 figuras grandes quase iguais</b> (prints do grafo, ~2 páginas). Teremos no máximo 5 figuras, cada uma com uma única mensagem.</li>
+      <li><b>Imprecisão conceitual</b>: Prim apresentado como algoritmo "para encontrar o caminho mínimo". Precisamos dizer exatamente o que cada algoritmo garante.</li>
+      <li><b>Erros de digitação</b> ("Djikstra", "reliazada", "portocolo") e <b>figura citada com número errado</b> (o texto fala em "figura 3" para a Figura 4). Usar sempre <code>\ref{}</code> e fazer revisão cruzada.</li>
+      <li><b>Equipe em 2 linhas genéricas</b>; sem pseudocódigo; sem protocolo de validação; sem limitações dos dados.</li>
+    </ul></div>
+  </div>
+  <div class="card"><h4><span class="pill warn">adaptar</span> A estrutura mudou de 2024 para 2026</h4>
+    <table class="t"><thead><tr><th>Trabalho de 2024</th><th>Diretrizes 2026 (o que vale para nós)</th><th>Consequência</th></tr></thead><tbody>
+    <tr><td>1 Introdução (1.1 Cenário, 1.2 Objetivos, 1.3 Equipe)</td><td>1 Introdução (1 pág.): contexto, problema, lacuna, pergunta, hipóteses, justificativa, objetivos</td><td>A equipe sai da introdução e vai para as Conclusões, como pede a diretriz sobre papéis</td></tr>
+    <tr><td>2 Trabalhos similares (2.1 O sensor, 2.2 Conceitos de grafos)</td><td>2 Referencial teórico (1 pág.)</td><td>Fica só o que sustenta o método: teoria da evasão, Gower, corte mínimo, Kruskal, DAG, trabalhos relacionados</td></tr>
+    <tr><td>3 Solução proposta (3.1 Modelagem, 3.2 Método, 3.3 Testes)</td><td>3 Metodologia (2 pág.): 3.1 Modelagem, 3.2 Método de solução</td><td>Os "testes" viram o <b>protocolo 80/20</b>, dentro de 3.2</td></tr>
+    <tr><td>4 Resultados (só texto)</td><td>4 Resultados (2 pág.)</td><td>Um parágrafo por hipótese, com tabela e figuras</td></tr>
+    <tr><td>5 Conclusões</td><td>5 Conclusões (1,5 coluna)</td><td>Respostas, limitações, papéis, link do GitHub</td></tr>
+    </tbody></table></div>
+</section>
+
+<section id="enxuto">
+  <h2>O que foi enxugado do v2 (decisões congeladas)</h2>
+  <p class="sec-lead">O v2 investigou tudo. O relatório tem 7 páginas úteis e 15 minutos de apresentação, então ficou só o que responde às perguntas.</p>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Tema</th><th>No relatório e nos slides</th><th>Só no repositório (ou trabalho futuro)</th></tr></thead><tbody>
+  <tr><td>Grafos</td><td><b>G1</b> similaridade + corte mínimo (núcleo) · <b>G2</b> árvore de Kruskal · <b>G3</b> DAG de trajetórias</td><td>G4 hipercubo de perfis + Dijkstra de intervenção (uma frase como trabalho futuro)</td></tr>
+  <tr><td>Hipóteses</td><td><b>H1</b> característica principal · <b>H2</b> replicação 80/20 das direções · <b>H3</b> ablação · <b>H4</b> grafo × indicador isolado</td><td>A antiga H5 (assortatividade) vira uma frase de apoio em H4</td></tr>
+  <tr><td>Comparadores</td><td>Classe majoritária · regra de 1 variável · caminho no DAG · <b>corte mínimo</b> · regressão logística (referência)</td><td>Voto kNN, função harmônica, corte sem viés</td></tr>
+  <tr><td>Métricas</td><td>Acurácia balanceada (principal) com IC 95% · F1 e recall da evasão · AUC · McNemar contra a regra isolada</td><td>MCC, curvas de operação</td></tr>
+  <tr><td>Ablação</td><td>Por grupo (figura) + eliminação backward (texto: "3 variáveis bastam no S1")</td><td>Variável a variável (36 barras)</td></tr>
+  <tr><td>Momentos</td><td><b>T1 (fim do S1) é o resultado principal</b>; T0 = alerta precoce; T2 = teto (vazamento parcial)</td><td>—</td></tr>
+  <tr><td>Motivação</td><td>Exemplo dos "gêmeos" (quase iguais no ingresso, desfechos opostos) como gancho da introdução e do 1º slide</td><td>Tabela completa de gêmeos</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="numeros">
+  <h2>Números oficiais (fonte única)</h2>
+  <p class="sec-lead">Todos foram calculados em <code>analise_v2/</code> (split estratificado 80/20, seed 42). <b>Regra:</b> nenhum número entra no relatório ou nos slides digitado de memória; copie desta tabela. Se o Rafael regenerar os resultados no repositório e algo mudar, ele atualiza aqui e avisa o grupo.</p>
+  <div class="grid2">
+    <div class="card"><h4>Dados e fatores</h4><table class="t"><tbody>
+      <tr><td>Alunos após o filtro (794 Enrolled removidos)</td><td class="num"><b>3.630</b></td></tr>
+      <tr><td>Evasão (Dropout × Graduate)</td><td class="num">39,15% (1.421 × 2.209)</td></tr>
+      <tr><td>Treino / teste</td><td class="num">2.904 / 726</td></tr>
+      <tr><td>Evasão com 0% de aprovação no S1 (inscritos)</td><td class="num">99,5% (n = 387)</td></tr>
+      <tr><td>Evasão de quem aprova 100% no S1</td><td class="num">10,3%</td></tr>
+      <tr><td>Evasão com mensalidade atrasada</td><td class="num">94,0% (lift ×2,40; teste ×2,41)</td></tr>
+      <tr><td>Bolsista (lift)</td><td class="num">×0,35 (teste ×0,38)</td></tr>
+      <tr><td>Devedor · idade ≥ 28 · masculino (lift)</td><td class="num">×1,94 · ×1,62 · ×1,45</td></tr>
+      <tr><td>Direções significativas que se repetem no teste</td><td class="num"><b>96,2%</b></td></tr>
+      <tr><td>Spearman do ranking de IM, treino × teste</td><td class="num">0,958</td></tr>
+      <tr><td>IM com o desfecho: aprovação S2 · S1 · mensalidade</td><td class="num">0,474 · 0,381 · 0,149 bits</td></tr>
+      <tr><td>Assortatividade do desfecho no kNN (T0 / T1 / T2)</td><td class="num">0,27 / 0,35 / 0,44 (perm. p = 0,005)</td></tr>
+    </tbody></table></div>
+    <div class="card"><h4>Teste 20% (acurácia balanceada)</h4><table class="t"><thead><tr><th>Método</th><th class="num">T0</th><th class="num">T1</th><th class="num">T2</th></tr></thead><tbody>
+      <tr><td>Classe majoritária</td><td class="num">0,500</td><td class="num">0,500</td><td class="num">0,500</td></tr>
+      <tr><td>Regra de 1 variável</td><td class="num">0,664</td><td class="num">0,825</td><td class="num">0,860</td></tr>
+      <tr><td>Caminho no DAG (G3)</td><td class="num">0,716</td><td class="num">0,816</td><td class="num">0,849</td></tr>
+      <tr><td><b>Corte mínimo (G1)</b></td><td class="num"><b>0,763</b></td><td class="num"><b>0,847</b></td><td class="num"><b>0,899</b></td></tr>
+      <tr><td class="small">IC 95% do corte mínimo</td><td class="num small">0,732–0,793</td><td class="num small">0,820–0,873</td><td class="num small">0,874–0,922</td></tr>
+      <tr><td class="small">F1 / recall da evasão (corte)</td><td class="num small">0,720 / 0,820</td><td class="num small">0,813 / 0,835</td><td class="num small">0,877 / 0,877</td></tr>
+      <tr><td class="small">AUC (corte)</td><td class="num small">0,852</td><td class="num small">0,937</td><td class="num small">0,965</td></tr>
+      <tr><td>Regressão logística (ref.)</td><td class="num">0,768</td><td class="num">0,884</td><td class="num">0,924</td></tr>
+      <tr><td>McNemar corte × regra isolada (p<sub>Holm</sub>)</td><td class="num">0,012</td><td class="num">0,41 (empate)</td><td class="num">0,0007</td></tr>
+      <tr><td>10 splits, corte (média ± dp)</td><td class="num">0,760 ± 0,015</td><td class="num">0,849 ± 0,010</td><td class="num">0,882 ± 0,010</td></tr>
+      <tr><td>Corte só com variáveis essenciais</td><td class="num">0,740 (8 var.)</td><td class="num"><b>0,858 (3 var.)</b></td><td class="num">0,893 (7 var.)</td></tr>
+    </tbody></table>
+    <p class="small sec">As regras de 1 variável aprendidas no treino são: T0, idade de ingresso ≥ 23 (0,662 no teste de <code>a1</code>); T1, aprovação no S1 &lt; 78%; T2, aprovação no S2 &lt; 79%. Use 0,664/0,825/0,860 (versão de <code>a2</code>, a mesma do McNemar) na tabela comparativa.</p></div>
+  </div>
+  <div class="callout"><b>As 3 frases-resumo do trabalho (todos usam as mesmas palavras)</b>
+  <ol class="tight" style="margin:4px 0 0">
+    <li>"A principal característica de quem evade é a <b>reprovação no 1º semestre</b>. Antes de existir nota, o sinal mais forte é <b>financeiro</b>."</li>
+    <li>"O que aprendemos com 80% dos alunos <b>se confirmou nos 20%</b>: 96% das direções se repetem, e a maior parte dos 36 parâmetros pode sair sem perda."</li>
+    <li>"No ingresso, quando nenhuma variável sozinha resolve, o <b>corte mínimo no grafo de similaridade</b> acerta 0,76 contra 0,66 (+10 p.p., significativo). O momento de intervir é o <b>fim do 1º semestre</b>."</li>
+  </ol></div>
+</section>
+
+<section id="relatorio">
+  <h2>O relatório página a página</h2>
+  <p class="sec-lead">9 páginas = capa + 7 de conteúdo + contracapa. O trabalho de referência usou 6 páginas de conteúdo e perdeu espaço com imagens repetidas. Nós vamos usar o espaço com número e figura que provam algo.</p>
+  <div class="card">
+    <div class="chart-title">Orçamento de páginas (conteúdo)</div>
+    <div id="budget" style="margin-top:10px"></div>
+    <div class="legend" id="budgetLeg"></div>
+  </div>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Seção</th><th>Espaço</th><th>Quem escreve</th><th>Conteúdo obrigatório</th><th>Figuras e tabelas</th></tr></thead><tbody>
+  <tr><td>1 Introdução</td><td>1 pág.</td><td>Nathan</td><td>Gancho dos "gêmeos"; evasão como problema relacional; lacuna (indicadores isolados); <b>pergunta</b>; <b>H1–H4</b>; justificativa; objetivos; organização do texto</td><td>—</td></tr>
+  <tr><td>2 Referencial</td><td>1 pág.</td><td>Nathan (Vinícius revisa)</td><td>Tinto; dataset (Realinho); Gower + kNN; fluxo máximo/corte mínimo (Cormen; Blum e Chawla), explicado em linguagem simples; Kruskal e árvore máxima (Chow e Liu); DAG e ordenação topológica; CRISP-NET; Porto et al.</td><td>—</td></tr>
+  <tr><td>3.1 Modelagem</td><td>~1 pág.</td><td>Vinícius</td><td>Dataset, filtro Enrolled, momentos T0/T1/T2, 3 armadilhas; definição formal de G1, G2, G3</td><td><b>Tab. 1</b> os 3 grafos · <b>Fig. 1</b> rede de fluxo · <b>Eq. 1</b> Gower</td></tr>
+  <tr><td>3.2 Método</td><td>~1 pág.</td><td>Carlos</td><td>Pipeline e protocolo 80/20 (CV só no treino; teste uma vez); pseudocódigos; hiperparâmetros; link do GitHub</td><td><b>Fig. 2</b> protocolo · <b>Alg. 1</b> Edmonds–Karp + corte · <b>Alg. 2</b> Kruskal máx. · <b>Tab. 2</b> hiperparâmetros</td></tr>
+  <tr><td>4 Resultados</td><td>2 pág.</td><td>Vinícius (texto) + Rafael (figuras/tabelas)</td><td>Um parágrafo por hipótese: H1 característica principal; H2 replicação; H3 ablação; H4 grafo × isolado (+ assortatividade, DAG)</td><td><b>Fig. 3</b> lift treino×teste · <b>Fig. 4</b> ablação por grupo · <b>Fig. 5</b> árvore de Kruskal · <b>Tab. 3</b> resultados no teste · (Fig. 6 DAG, se couber)</td></tr>
+  <tr><td>5 Conclusões</td><td>1,5 col.</td><td>Nathan</td><td>Respostas, aplicação institucional (alerta no fim do S1), limitações, trabalhos futuros (G4, dados UNIFEI), <b>papéis da Tabela 1 + nota do Modelador B</b>, GitHub</td><td>—</td></tr>
+  <tr><td>Referências</td><td>~½ col.</td><td>cada um adiciona as suas</td><td>~10 referências, formato do template (apalike)</td><td>—</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="pessoas">
+  <h2>Quem faz o quê</h2>
+  <p class="sec-lead">Cada cartão diz o que a pessoa <b>recebe</b>, o que <b>entrega</b> e <b>para quem</b>. Os horários são os limites; quem terminar antes ajuda o corresponsável.</p>
+  <div class="grid2">
+    <div class="card" id="p-nathan" data-person="nathan"><h3 style="margin-top:0">Nathan · Coordenador <span class="pill prog"></span></h3>
+      <p class="small sec">Recebe: este plano, os textos de todos, as figuras do Rafael. Entrega: repositório organizado, seções 1, 2 e 5, slides, PDF enviado.</p>
+      <ul class="check">
+        <li data-k="n1">Sáb 12h · recolher o "ok" de todos neste v3 (decisões congeladas)</li>
+        <li data-k="n2">Sáb 14h · repositório GitHub com a estrutura e um README com o checklist; projeto no Overleaf com o template 2026, já dividido em <code>elemtextuais/*.tex</code></li>
+        <li data-k="n3">Sáb 19h · <b>Seção 1</b> (1 pág.): gancho dos gêmeos, pergunta, H1–H4, objetivos</li>
+        <li data-k="n4">Sáb 23h · <b>Seção 2</b> (1 pág.), com Edmonds–Karp e Kruskal explicados em linguagem simples (padrão do trabalho de referência)</li>
+        <li data-k="n5">Sáb 23h · <code>referencias.bib</code> com as chaves combinadas (ver <a href="#juntar">Como juntar</a>), conferindo DOIs e páginas</li>
+        <li data-k="n6">Dom 13h · <b>Seção 5</b>: respostas, limitações, trabalhos futuros, papéis (texto pronto em <a href="#latex">LaTeX</a>), GitHub</li>
+        <li data-k="n7">Dom 13h · revisar a seção 4 e o documento inteiro (<a href="#checklist">checklist</a>)</li>
+        <li data-k="n8">Dom 18h · slides finais (assertion-evidence) e ensaio cronometrado</li>
+        <li data-k="n9">Dom 22h · enviar o PDF no SIGAA (só um integrante envia) e confirmar o recibo no grupo</li>
+      </ul></div>
+    <div class="card" id="p-vinicius" data-person="vinicius"><h3 style="margin-top:0">Vinícius · Modelador <span class="pill prog"></span></h3>
+      <p class="small sec">Recebe: v2, números oficiais, figuras do Rafael. Entrega: seção 3.1, o texto da seção 4, a Fig. 1 e a Tab. 1.</p>
+      <ul class="check">
+        <li data-k="v1">Sáb 19h · <b>Seção 3.1</b>: dataset UCI 697, filtro dos 794 Enrolled, momentos T0/T1/T2 e as 3 armadilhas (S2 contém o desfecho; mensalidade possivelmente medida depois; macro = coorte)</li>
+        <li data-k="v2">Sáb 19h · <b>Eq. 1</b> (Gower, com "onde:" para cada símbolo) e definição formal do G1 (rede de fluxo)</li>
+        <li data-k="v3">Sáb 19h · <b>Tab. 1</b>: os 3 grafos (vértices, arestas, pesos, algoritmo, pergunta que responde)</li>
+        <li data-k="v4">Sáb 21h · <b>Fig. 1</b>: esquema da rede de fluxo, com S, T, evadidos, formados, alunos de teste e o corte (pode partir do esquema do v2)</li>
+        <li data-k="v5">Sáb 23h · escolher com o Rafael a versão final das Figs. 3–5 (uma mensagem por figura)</li>
+        <li data-k="v6">Dom 11h · <b>Seção 4 (texto)</b>: um parágrafo por hipótese, com veredito, número oficial e leitura educacional</li>
+        <li data-k="v7">Dom 13h · revisão cruzada: seção 3.2 e código do Carlos (faixas e flags fazem sentido educacional?)</li>
+        <li data-k="v8">Dom 18h · ensaiar a sua parte dos slides (4,5 min)</li>
+      </ul></div>
+    <div class="card" id="p-carlos" data-person="carlos"><h3 style="margin-top:0">Carlos · Desenvolvedor A <span class="pill prog"></span></h3>
+      <p class="small sec">Recebe: <code>analise_v2/</code>. Entrega: <code>src/</code> rodando, a seção 3.2, Alg. 1–2, Tab. 2, Fig. 2 e a demonstração.</p>
+      <ul class="check">
+        <li data-k="c1">Sáb 19h · <code>src/dados.py</code> (vem de <code>common.py</code>) e <code>src/grafo_similaridade.py</code> (Gower + kNN)</li>
+        <li data-k="c2">Sáb 19h · <code>src/corte_minimo.py</code>: <b>Edmonds–Karp próprio</b> (BFS no residual), corte por BFS, contração dos rotulados em S e T, e um assert contra o networkx</li>
+        <li data-k="c3">Sáb 21h · <code>src/arvore_dependencias.py</code> (Kruskal próprio + union-find) e <code>src/dag_trajetorias.py</code> (Kahn + Bellman-Ford)</li>
+        <li data-k="c4">Sáb 21h · <code>src/main.py</code> roda tudo e grava em <code>outputs/</code></li>
+        <li data-k="c5">Sáb 23h · <b>Seção 3.2</b> com <b>Alg. 1</b>, <b>Alg. 2</b> (prontos em <a href="#latex">LaTeX</a>), <b>Tab. 2</b> de hiperparâmetros e link do GitHub</li>
+        <li data-k="c6">Sáb 23h · <b>Fig. 2</b>: o pipeline do protocolo 80/20 (draw.io ou TikZ, exportado em PDF)</li>
+        <li data-k="c7">Dom 13h · revisão cruzada da seção 3.1</li>
+        <li data-k="c8">Dom 16h · demonstração: lista de alunos em risco + caminho do aluno no DAG</li>
+      </ul></div>
+    <div class="card" id="p-rafael" data-person="rafael"><h3 style="margin-top:0">Rafael · Desenvolvedor B <span class="pill prog"></span></h3>
+      <p class="small sec">Recebe: <code>analise_v2/a2_mincut</code> e <code>a1_fatores</code>. Entrega: <code>src/avaliacao.py</code>, <code>src/figuras.py</code>, Figs. 3–5, Tab. 3 e o vídeo.</p>
+      <ul class="check">
+        <li data-k="r1">Sáb 19h · <code>src/avaliacao.py</code>: CV só no treino, teste uma vez, bootstrap, McNemar + Holm, ablação por grupo e backward</li>
+        <li data-k="r2"><b>Plano B</b>: se o <code>src/</code> atrasar, usar <code>analise_v2/a2_mincut/final_results.json</code> direto; os números são os oficiais</li>
+        <li data-k="r3">Sáb 21h · <code>src/figuras.py</code> gera, em PDF vetorial: <b>Fig. 3</b> lift treino×teste, <b>Fig. 4</b> ablação por grupo, <b>Fig. 5</b> árvore de Kruskal (T1)</li>
+        <li data-k="r4">Sáb 23h · <b>Tab. 3</b> de resultados (pronta em <a href="#latex">LaTeX</a>, conferindo com os números oficiais)</li>
+        <li data-k="r5">Dom 11h · apoiar o Vinícius na seção 4: legendas das figuras e números citados no texto</li>
+        <li data-k="r6">Dom 13h · revisão cruzada das seções 1 e 2; conferir se <code>python src/main.py</code> roda do zero num clone limpo</li>
+        <li data-k="r7">Dom 18h · gravar o vídeo curto da demonstração (backup da demo ao vivo)</li>
+      </ul></div>
+  </div>
+</section>
+
+<section id="cronograma">
+  <h2>Cronograma e pontos de junção</h2>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Quando</th><th>Ponto de junção</th><th>Depende de</th><th>Quem confere</th></tr></thead><tbody>
+  <tr><td><b>Sáb 12h</b></td><td>v3 aprovado; decisões congeladas</td><td>—</td><td>Nathan</td></tr>
+  <tr><td><b>Sáb 14h</b></td><td>Repositório e Overleaf prontos</td><td>—</td><td>Nathan</td></tr>
+  <tr><td><b>Sáb 19h</b></td><td>Junção 1: <code>src/</code> roda (G1, G2, G3); seções 1 e 3.1 em rascunho</td><td>repositório</td><td>Carlos e Vinícius</td></tr>
+  <tr><td><b>Sáb 23h</b></td><td>Junção 2: Figs. 1–5, Tabs. 1–3 e Algs. 1–2 no Overleaf; seções 2 e 3.2 em rascunho</td><td>Junção 1</td><td>Rafael e Nathan</td></tr>
+  <tr><td><b>Dom 13h</b></td><td>Junção 3: relatório completo + revisão cruzada (Vinícius → 3.2; Carlos → 3.1; Rafael → 1 e 2; Nathan → 4 e o todo)</td><td>Junção 2</td><td>Nathan</td></tr>
+  <tr><td><b>Dom 18h</b></td><td>Slides, vídeo, ensaio de 15 min</td><td>Junção 3</td><td>Nathan</td></tr>
+  <tr><td><b>Dom 22h</b></td><td>PDF enviado no SIGAA (2h de folga)</td><td>checklist</td><td>Nathan</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="juntar">
+  <h2>Como juntar no final sem conflito</h2>
+  <div class="grid2">
+    <div class="card"><h4>Overleaf (relatório)</h4><ul class="tight small">
+      <li>O template já separa as seções em arquivos. <b>Cada pessoa edita só o próprio arquivo</b>: <code>1-Introducao.tex</code> e <code>2-Referencial.tex</code> (Nathan); <code>3-Desenvolvimento.tex</code>, onde 3.1 é do Vinícius e 3.2 do Carlos; <code>4-Resultados.tex</code> (Vinícius + Rafael); <code>5-Conclusoes.tex</code> (Nathan).</li>
+      <li><code>main.tex</code>, <code>configuracao.tex</code> e a capa: só o Nathan mexe.</li>
+      <li><b>Rótulos combinados</b> (use exatamente estes): <code>fig:fluxo</code>, <code>fig:protocolo</code>, <code>fig:lift</code>, <code>fig:ablacao</code>, <code>fig:arvore</code>, <code>fig:dag</code>, <code>tab:grafos</code>, <code>tab:hiper</code>, <code>tab:resultados</code>, <code>alg:ek</code>, <code>alg:kruskal</code>, <code>eq:gower</code>, <code>eq:cap</code>.</li>
+      <li><b>Chaves de referência</b>: <code>realinho2022</code>, <code>tinto1975</code>, <code>gower1971</code>, <code>blum2001</code>, <code>chow1968</code>, <code>cormen2009</code>, <code>newman2003</code>, <code>acunacid2025</code>, <code>porto2025</code>.</li>
+      <li>Figuras em <code>figs/</code>, em PDF vetorial, com nomes iguais aos rótulos (<code>fig-lift.pdf</code> etc.).</li>
+    </ul></div>
+    <div class="card"><h4>GitHub (código)</h4><pre>smac03-evasao-grafos/
+├── data/data.csv
+├── src/
+│   ├── dados.py               # Carlos
+│   ├── grafo_similaridade.py  # Carlos
+│   ├── corte_minimo.py        # Carlos (Edmonds–Karp próprio)
+│   ├── arvore_dependencias.py # Carlos (Kruskal)
+│   ├── dag_trajetorias.py     # Carlos (Kahn + Bellman-Ford)
+│   ├── avaliacao.py           # Rafael
+│   ├── figuras.py             # Rafael
+│   └── main.py                # Carlos
+├── analise_v2/                # análise original (referência)
+├── outputs/                   # resultados.json + figuras
+├── docs/plano-v2.html, plano-v3.html
+├── relatorio/                 # export do Overleaf
+├── slides/
+└── README.md                  # Nathan: como rodar + checklist</pre>
+    <p class="small sec">Carlos e Rafael commitam em arquivos diferentes, então não há conflito. O Nathan faz o commit final de <code>relatorio/</code> e <code>slides/</code>.</p></div>
+  </div>
+</section>
+
+<section id="latex">
+  <h2>LaTeX pronto para colar</h2>
+  <p class="sec-lead">No padrão do template (<code>algorithm2e</code>, tabelas simples). Conferir os pacotes no <code>main.tex</code> (<code>amsmath</code>, <code>algorithm2e</code>). Use o botão "copiar".</p>
+
+  <details><summary>Eq. 1 · Distância de Gower e capacidade (Vinícius, 3.1)</summary><pre class="copy">\begin{equation}
+d_t(i,j)=\frac{\sum_{a\in A_t} w_a\,\delta_a(i,j)}{\sum_{a\in A_t} w_a},\qquad
+\delta_a(i,j)=\begin{cases}
+\dfrac{|x_{ia}-x_{ja}|}{R_a} &amp; \text{se } a \text{ é numérica}\\[4pt]
+[\,x_{ia}\neq x_{ja}\,] &amp; \text{se } a \text{ é nominal}
+\end{cases}
+\label{eq:gower}
+\end{equation}
+onde:
+\begin{itemize}
+  \item $A_t$ é o conjunto de atributos disponíveis no momento $t$ (T0, T1 ou T2);
+  \item $w_a$ é a informação mútua entre o atributo $a$ e o desfecho, calculada só no treino;
+  \item $R_a$ é a amplitude de $a$ no treino;
+  \item $[\cdot]$ vale 1 se a condição é verdadeira e 0 caso contrário.
+\end{itemize}
+A capacidade de cada aresta do grafo kNN é a similaridade
+\begin{equation}
+c(i,j)=c(j,i)=1-d_t(i,j).
+\label{eq:cap}
+\end{equation}</pre></details>
+
+  <details><summary>Alg. 1 · Classificação por corte mínimo com Edmonds–Karp (Carlos, 3.2)</summary><pre class="copy">\begin{algorithm}[ht!]
+\small
+\KwData{grafo kNN $G=(V,E)$ com capacidades $c$; alunos de treino $L$ com rótulos $y$; alunos de teste $U$}
+\KwResult{previsão $\hat{y}_u$ para cada $u \in U$}
+criar super-fonte $S$ e super-sumidouro $T$\;
+\ForEach{$v \in L$}{
+  \eIf{$y_v = \text{evasão}$}{$c(S,v) \leftarrow \infty$\;}{$c(v,T) \leftarrow \infty$\;}
+}
+$f \leftarrow 0$\;
+\While{existe caminho $P$ de $S$ a $T$ na rede residual (BFS)}{
+  $\Delta \leftarrow \min_{(a,b)\in P} c_f(a,b)$\;
+  aumentar o fluxo em $\Delta$ ao longo de $P$; $f \leftarrow f+\Delta$\;
+}
+$A \leftarrow$ vértices alcançáveis a partir de $S$ na rede residual (BFS)\;
+\ForEach{$u \in U$}{
+  \eIf{$u \in A$}{$\hat{y}_u \leftarrow$ evasão\;}{$\hat{y}_u \leftarrow$ conclusão\;}
+}
+\Return{$\hat{y}$}
+\caption{Classificação por corte mínimo (Edmonds--Karp)}
+\label{alg:ek}
+\end{algorithm}</pre></details>
+
+  <details><summary>Alg. 2 · Árvore geradora máxima de informação mútua, Kruskal (Carlos, 3.2)</summary><pre class="copy">\begin{algorithm}[ht!]
+\small
+\KwData{atributos discretizados $X_1,\dots,X_p$ e desfecho $Y$ (somente treino)}
+\KwResult{árvore de dependências $T$}
+$\mathcal{E} \leftarrow \{(a,b,I(a;b))\}$ para todo par de vértices em $\{X_1,\dots,X_p,Y\}$\;
+ordenar $\mathcal{E}$ por $I$ em ordem \textbf{decrescente}\;
+$T \leftarrow \emptyset$; \textsc{Make-Set}$(v)$ para todo vértice $v$\;
+\ForEach{$(a,b) \in \mathcal{E}$}{
+  \If{\textsc{Find-Set}$(a) \neq$ \textsc{Find-Set}$(b)$}{
+    $T \leftarrow T \cup \{(a,b)\}$; \textsc{Union}$(a,b)$\;
+  }
+}
+\Return{$T$}
+\caption{Árvore geradora máxima de informação mútua (Kruskal)}
+\label{alg:kruskal}
+\end{algorithm}</pre></details>
+
+  <details><summary>Tab. 2 · Hiperparâmetros (Carlos, 3.2), no estilo da "tabela de constantes" do trabalho de referência</summary><pre class="copy">\begin{table}[ht!]
+\centering\small
+\caption{Parâmetros do protocolo e do corte mínimo (escolhidos só no treino)}
+\label{tab:hiper}
+\begin{tabular}{lll}
+\hline
+Parâmetro &amp; Símbolo &amp; Valor \\ \hline
+Divisão treino/teste &amp; -- &amp; 80/20 estratificada, semente 42 \\
+Validação para escolhas &amp; -- &amp; 5 dobras, só no treino \\
+Vizinhos por aluno &amp; $k$ &amp; 25 (T0, T1); 40 (T2) \\
+Peso dos atributos &amp; $w_a$ &amp; informação mútua com o desfecho \\
+Similaridade &amp; $c(i,j)$ &amp; $1-d_t(i,j)$ \\
+Viés para o lado de $T$ &amp; $\lambda$ &amp; 1,0 \\
+Intervalo de confiança &amp; -- &amp; bootstrap, 1000 reamostras \\
+Robustez &amp; -- &amp; 10 divisões 80/20 \\ \hline
+\end{tabular}
+\end{table}</pre></details>
+
+  <details><summary>Tab. 3 · Resultados no teste (Rafael, 4)</summary><pre class="copy">\begin{table}[ht!]
+\centering\small
+\caption{Acurácia balanceada no conjunto de teste (726 alunos, nunca usados nas escolhas). IC 95\% por bootstrap.}
+\label{tab:resultados}
+\begin{tabular}{lccc}
+\hline
+Método &amp; T0 ingresso &amp; T1 fim S1 &amp; T2 fim S2 \\ \hline
+Classe majoritária &amp; 0,500 &amp; 0,500 &amp; 0,500 \\
+Regra de 1 variável &amp; 0,664 &amp; 0,825 &amp; 0,860 \\
+Caminho no DAG (G3) &amp; 0,716 &amp; 0,816 &amp; 0,849 \\
+\textbf{Corte mínimo (G1)} &amp; \textbf{0,763} &amp; \textbf{0,847} &amp; \textbf{0,899} \\
+\quad IC 95\% &amp; [0,732; 0,793] &amp; [0,820; 0,873] &amp; [0,874; 0,922] \\
+Regressão logística (ref.) &amp; 0,768 &amp; 0,884 &amp; 0,924 \\ \hline
+\end{tabular}
+\end{table}</pre></details>
+
+  <details><summary>Texto dos papéis (Nathan, 5)</summary><pre class="copy">\textbf{Papéis.} Nathan (Coordenador): planejamento, metodologia CRISP-NET,
+Introdução, Referencial, Conclusões e apresentação; corresponsável pela modelagem.
+Vinícius (Modelador): delimitação do problema, curadoria do dataset, modelagem
+formal dos grafos e interpretação dos resultados. Carlos (Desenvolvedor A):
+arquitetura e núcleo algorítmico (corte mínimo, Kruskal, DAG). Rafael
+(Desenvolvedor B): validação quantitativa, ablação, figuras e demonstração.
+O integrante originalmente designado como Modelador B trancou a disciplina;
+suas atividades foram redistribuídas mantendo um responsável principal e um
+corresponsável para cada atividade crítica. Código: \url{https://github.com/...}</pre></details>
+</section>
+
+<section id="slides">
+  <h2>Apresentação (~15 min)</h2>
+  <p class="sec-lead">Padrão assertion-evidence: o título é uma frase-afirmação e o corpo é a figura que a prova. Sem slides de tópicos. As figuras são as mesmas do relatório.</p>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Quem</th><th>Slides (título = afirmação)</th><th>Evidência</th><th>Tempo</th></tr></thead><tbody>
+  <tr><td>Nathan</td><td>"Dois alunos quase iguais no ingresso podem ter desfechos opostos" · pergunta e H1–H4 · CRISP-NET</td><td>exemplo dos gêmeos</td><td>3 min</td></tr>
+  <tr><td>Vinícius</td><td>"Tiramos os 794 ainda matriculados e separamos 20% para provar" · "Reprovar no 1º semestre é o maior sinal; no ingresso, é o financeiro" · "Metade dos parâmetros não muda nada" · "Os fatores chegam à evasão por três portas"</td><td>Fig. 2, 3, 4, 5</td><td>4,5 min</td></tr>
+  <tr><td>Carlos</td><td>"O corte mínimo separa o mundo dos evadidos do dos formados" · <b>demonstração</b></td><td>Fig. 1 + trecho do Edmonds–Karp</td><td>3,5 min</td></tr>
+  <tr><td>Rafael</td><td>"Nos 20% nunca vistos, o grafo acerta 0,76 no ingresso contra 0,66 de qualquer variável isolada" · "O momento de intervir é o fim do 1º semestre"</td><td>Tab. 3 + assortatividade</td><td>3 min</td></tr>
+  <tr><td>Nathan</td><td>Limitações e conclusões</td><td>—</td><td>1 min</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="checklist">
+  <h2>Checklist antes de enviar (Nathan, domingo, 20h–22h)</h2>
+  <p class="sec-lead">Cada item corresponde a uma diretriz de 2026 ou a um problema visto no trabalho de referência.</p>
+  <div class="card" data-person="final"><ul class="check">
+    <li data-k="f1">PDF com <b>≤ 9 páginas</b>, contando capa e contracapa; seções nos limites (Intro 1 · Ref 1 · Metodologia 2 · Resultados 2 · Conclusões 1,5 col.)</li>
+    <li data-k="f2">A introdução tem <b>pergunta, H1–H4 e objetivos</b>, e não uma lista genérica de desafios</li>
+    <li data-k="f3">Os resultados têm <b>tabela com números e IC</b>, não só descrição qualitativa</li>
+    <li data-k="f4">Todo número do texto bate com a tabela de <a href="#numeros">números oficiais</a></li>
+    <li data-k="f5">Toda figura e tabela é citada com <code>\ref{}</code>, tem legenda e aparece perto da citação; nenhum "Figura ??"</li>
+    <li data-k="f6">Toda equação tem "onde:" definindo os símbolos; os algoritmos estão em <code>algorithm2e</code></li>
+    <li data-k="f7">Cada algoritmo é descrito pelo que ele <b>garante</b> (sem confundir árvore geradora com caminho mínimo)</li>
+    <li data-k="f8">Corretor ortográfico passado; nomes próprios conferidos (Dijkstra, Kruskal, Edmonds–Karp, Ford–Fulkerson)</li>
+    <li data-k="f9">Nenhum conteúdo que não seja grafo ocupando espaço (dicionário de variáveis fica no repositório)</li>
+    <li data-k="f10">Papéis da Tabela 1 + nota do Modelador B; link do GitHub no texto; repositório público, com README e código rodando</li>
+    <li data-k="f11">Referências completas e no formato do template; DOIs conferidos</li>
+    <li data-k="f12">Slides (.pdf/.pptx) e vídeo da demonstração no repositório</li>
+    <li data-k="f13">Só <b>um integrante</b> envia o PDF no SIGAA; o recibo é compartilhado no grupo</li>
+  </ul></div>
+  <p class="small muted">Plano v3 gerado em 21/11/2026. Fontes: Diretrizes SMAC03 2026.2, template LaTeX 2026, relatório de referência "Roteamento em Redes de Sensores Sem Fio" (2024, nota 7/8), Plano v2 e <code>analise_v2/</code>. As causas do desconto no trabalho de referência são inferência do grupo, não feedback do professor.</p>
+</section>
+</main></div>
+<script>(function () {
+  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+  $('#themeBtn').addEventListener('click', () => {
+    const r = document.documentElement; const c = r.getAttribute('data-theme');
+    const dark = c ? c === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    r.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+  const KEY = 'smac03-plano-v3';
+  let st = {}; try { st = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { } };
+  function refresh() {
+    $$('[data-person]').forEach(card => {
+      const items = [...card.querySelectorAll('ul.check li')];
+      const done = items.filter(li => st[li.dataset.k]).length;
+      const p = card.querySelector('.pill.prog'); if (p) p.textContent = done + '/' + items.length;
+    });
+  }
+  $$('ul.check li').forEach(li => {
+    const k = li.dataset.k; const span = document.createElement('span'); span.className = 'txt';
+    while (li.firstChild) span.appendChild(li.firstChild);
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!st[k];
+    cb.setAttribute('aria-label', 'concluído');
+    li.appendChild(cb); li.appendChild(span); li.classList.toggle('done', cb.checked);
+    cb.addEventListener('change', () => { st[k] = cb.checked; li.classList.toggle('done', cb.checked); save(); refresh(); });
+  });
+  refresh();
+  $('#resetBtn').addEventListener('click', () => {
+    if (confirm('Limpar todas as suas marcações nesta página?')) {
+      st = {}; save();
+      $$('ul.check input').forEach(c => { c.checked = false; c.closest('li').classList.remove('done'); });
+      refresh();
+    }
+  });
+  $$('pre.copy').forEach(pre => {
+    const src = pre.textContent;
+    const b = document.createElement('button'); b.className = 'btn copybtn'; b.type = 'button'; b.textContent = 'copiar';
+    b.addEventListener('click', () => {
+      const done = () => { b.textContent = 'copiado ✓'; setTimeout(() => b.textContent = 'copiar', 1500); };
+      if (navigator.clipboard) navigator.clipboard.writeText(src).then(done, () => fallback());
+      else fallback();
+      function fallback() { const t = document.createElement('textarea'); t.value = src; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done(); }
+    });
+    pre.appendChild(b);
+  });
+  const parts = [['Introdução', 1, 'var(--s1)', '#fff'], ['Referencial', 1, 'var(--s2)', '#fff'], ['3.1 Modelagem', 1, 'var(--s3)', '#fff'],
+    ['3.2 Método', 1, 'var(--s4)', '#0b0b0b'], ['Resultados', 2, 'var(--s5)', '#fff'], ['Conclusões + referências', 1, 'var(--s6)', '#fff']];
+  const bar = document.createElement('div'); bar.className = 'seg-bar'; bar.setAttribute('role', 'img');
+  bar.setAttribute('aria-label', 'Orçamento de 7 páginas de conteúdo: ' + parts.map(p => p[0] + ' ' + p[1] + ' pág.').join(', '));
+  parts.forEach(p => { const d = document.createElement('div'); d.style.flex = p[1]; d.style.background = p[2]; d.style.color = p[3]; d.textContent = p[1] + ' pág.'; d.title = p[0] + ': ' + p[1] + ' página(s)'; bar.appendChild(d); });
+  $('#budget').appendChild(bar);
+  const leg = $('#budgetLeg');
+  parts.forEach(p => { const k = document.createElement('span'); k.className = 'k'; const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = p[2]; const t = document.createElement('span'); t.textContent = p[0]; k.append(sw, t); leg.appendChild(k); });
+})();
+</script></body></html>
