@@ -34,7 +34,7 @@ import pandas as pd
 from sklearn.metrics import mutual_info_score
 
 from corte_minimo import ClassificadorCorteMinimo
-from dados import DERIVADOS, NOMINAIS
+from dados import DERIVADOS, NOMINAIS, faixa_aprovacao
 from grafo import Grafo
 from modelo import ModeloGrafo
 
@@ -47,8 +47,6 @@ MIN_POR_CATEGORIA = 30
 # Numérica com mais valores distintos que isto é cortada em quantis.
 MAX_VALORES_DISCRETOS = 10
 NUM_QUANTIS = 4
-# Faixas da taxa de aprovação (as mesmas camadas L2/L3 do DAG).
-FAIXAS_APROVACAO = ("sem inscricao", "0%", "(0,50%)", "[50,100%)", "100%")
 
 # Linhas da matriz de distâncias calculadas de cada vez (memória).
 TAMANHO_BLOCO = 512
@@ -257,7 +255,7 @@ class GrafoSimilaridade(ModeloGrafo):
         """Informação mútua, em bits, entre um atributo e o desfecho.
 
         O atributo é discretizado antes: taxas de aprovação usam as
-        faixas do DAG (``FAIXAS_APROVACAO``); categorias nominais raras
+        faixas do DAG (``dados.FAIXAS_APROVACAO``); categorias nominais raras
         (< ``MIN_POR_CATEGORIA``) viram "outros"; numéricas com muitos
         valores viram ``NUM_QUANTIS`` faixas de quantil; ausente é uma
         categoria própria. Chamar só com dados de treino.
@@ -278,9 +276,7 @@ class GrafoSimilaridade(ModeloGrafo):
         (``ArvoreDependencias``) para a IM entre pares de atributos.
         """
         if serie.name in DERIVADOS:
-            serie = pd.Series(np.select(
-                [serie.isna(), serie == 0, serie < 0.5, serie < 1],
-                FAIXAS_APROVACAO[:4], FAIXAS_APROVACAO[4]))
+            serie = pd.Series(faixa_aprovacao(serie))
         elif serie.name in NOMINAIS:
             contagem = serie.value_counts()
             raros = contagem.index[contagem < MIN_POR_CATEGORIA]
