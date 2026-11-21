@@ -94,7 +94,7 @@ for modelo in modelos:
 | `taxa_evasao(idx=None)` | fração de evadidos |
 | `dividir(semente)` | nova divisão estratificada (para os 10 splits de robustez) |
 
-Constantes do módulo: `GRUPOS` (os 7 grupos de atributos, usados na ablação), `MOMENTOS`, `DERIVADOS` e `NOMINAIS` (códigos sem ordem, comparados por igualdade na distância de Gower; os demais são numéricos ou 0/1). Taxa de aprovação com 0 inscritas fica `NaN`: é a faixa "sem inscrição", tratada por quem usa a base.
+Constantes do módulo: `GRUPOS` (os 7 grupos de atributos, usados na ablação), `MOMENTOS`, `DERIVADOS`, `FAIXAS_APROVACAO` (com a função `faixa_aprovacao`, usada pelo G1 e pelo G3) e `NOMINAIS` (códigos sem ordem, comparados por igualdade na distância de Gower; os demais são numéricos ou 0/1). Taxa de aprovação com 0 inscritas fica `NaN`: é a faixa "sem inscrição", tratada por quem usa a base.
 
 A divisão com semente 42 reproduz os números de `analise_v2` no treino (0% de aprovação no S1: n = 387, 99,5% de evasão; mensalidade atrasada: n = 383, 94,0%).
 
@@ -125,6 +125,12 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 - **Rótulos:** `True` = evadiu (`Dropout`), `False` = formou (`Graduate`).
 - O que for específico de um modelo volta no dict de `executar()`. Não crie métodos abstratos novos sem combinar.
 - Parâmetros novos (como o viés λ) entram como argumentos opcionais com valor padrão. Hiperparâmetros vão no `__init__`.
+
+**G3 (`dag_trajetorias.py`).** Três classes:
+
+- `Kahn().ordenar(grafo) -> list`: ordem topológica; `ValueError` se houver ciclo.
+- `BellmanFord()`: `distancias(grafo, fonte) -> dict` e `caminho(destino) -> list`; aceita pesos negativos e detecta ciclo negativo.
+- `DagTrajetorias(momento="T2", min_suporte=20, limiar=None)`: `construir(base, idx_treino=None, idx_teste=None)` monta o DAG só com o treino (peso do arco = número de alunos); do teste guarda só os estados L0–L3. `executar()` devolve `ordem_topologica`, `trajetoria_risco` e `trajetoria_segura` (`caminho`, `n`, `evasoes` no treino), `ponto_de_virada`, `risco` (nota contínua, serve para a AUC) e `previsoes` por aluno, e `limiar`. `destaques()` devolve a trajetória de maior risco. Estatísticas: `contagem_vertice_`, `evasoes_vertice_`, `contagem_arco_`, `evasoes_arco_`, `probabilidade(u, v)`, `taxa_arco(u, v)`; `DagTrajetorias.estados(df)` dá os estados de qualquer aluno.
 
 ## Padrões de código
 

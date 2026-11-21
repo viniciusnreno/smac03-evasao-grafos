@@ -14,7 +14,7 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | 5 | `grafo_similaridade.py`: Gower + kNN | Rafael (Carlos não iniciou) | Sáb 21/11, 19h | concluída | `GrafoSimilaridade` integrado ao corte mínimo; Gower e kNN conferidos por força bruta; reproduz a IM e a assortatividade (0,27/0,35/0,44) do `analise_v2`; CV no treino: 0,732 / 0,847 / 0,875 |
 | 6 | `corte_minimo.py`: Edmonds–Karp próprio + corte por BFS | Rafael | Sáb 21/11, 19h | concluída | Classes `EdmondsKarp` e `ClassificadorCorteMinimo`; conferidas contra o networkx (300 redes + 100 classificações); 0,2 s na escala real. Integrado ao G1 pelo `GrafoSimilaridade.executar()` |
 | 7 | `arvore_dependencias.py`: Kruskal + union-find | Carlos | Sáb 21/11, 21h | pendente | |
-| 8 | `dag_trajetorias.py`: Kahn + Bellman-Ford | Carlos | Sáb 21/11, 21h | pendente | |
+| 8 | `dag_trajetorias.py`: Kahn + Bellman-Ford | Rafael (Carlos no G2) | Sáb 21/11, 21h | concluída | `Kahn`, `BellmanFord` e `DagTrajetorias`; algoritmos conferidos com o networkx (300 grafos cada); reproduz 23 vértices/76 arcos, trajetória de risco 57/57, segura 13/319 e ponto de virada; CV no treino: 0,731 / 0,817 / 0,823 |
 | 9 | `main.py`: pipeline grava em `outputs/` | Carlos | Sáb 21/11, 21h | pendente | |
 | 10 | `avaliacao.py`: CV, teste, bootstrap, McNemar, ablação | Rafael | Sáb 21/11, 19h | pendente | |
 | 11 | `figuras.py`: Figs. 3–5 em PDF | Rafael | Sáb 21/11, 21h | pendente | |
