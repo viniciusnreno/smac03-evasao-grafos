@@ -110,6 +110,14 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
   - `EdmondsKarp`: fluxo máximo genérico. `fluxo_maximo(rede, s, t) -> float` e `lado_da_fonte() -> set` (corte mínimo por BFS no residual). Não altera a rede recebida.
   - `ClassificadorCorteMinimo(lam=1.0, contrair=True)`: monta a rede do G1 com S e T, chama o `EdmondsKarp` e traduz o corte em previsões. Depois de `classificar`, expõe `fluxo`, `num_caminhos`, `lado_evasao` e `arestas_cortadas()` (para `destaques`).
 - `GrafoSimilaridade.executar()` usa o `ClassificadorCorteMinimo`.
+- **`GrafoSimilaridade(momento, k, pesos=None, lam=1.0, incluir_derivados=True, excluir=())`**:
+  - `construir(base, idx_treino=None, idx_teste=None)`: por padrão usa a divisão oficial; na CV, passe as dobras. Os vértices são treino + teste; pesos e amplitudes vêm só de `idx_treino`, e os rótulos do teste nunca são lidos.
+  - `pesos=None` calcula a informação mútua no treino. Para isso o atributo é discretizado: taxas de aprovação nas faixas do DAG (sem inscrição, 0%, (0,50%), [50,100%), 100%), categorias nominais com menos de 30 alunos agrupadas em "outros" e numéricas com mais de 10 valores em quartis. Essa discretização reproduz a IM do `analise_v2`. Um dict fixa os pesos e restringe os atributos (`dict.fromkeys(cols, 1.0)` dá pesos iguais).
+  - Valor ausente (taxa sem inscrição) é uma categoria própria: dois ausentes têm δ = 0, um só ausente tem δ = 1. O δ numérico é limitado a 1 (aluno do teste fora da amplitude do treino).
+  - O kNN liga i e j se um estiver entre os k mais próximos do outro. Empates de distância ficam com o aluno de menor número.
+  - `K_PADRAO = {"T0": 25, "T1": 25, "T2": 40}`. `incluir_derivados=True` foi escolhido por CV de 5 dobras no treino (T1: 0,847 contra 0,822 sem as taxas; T2: 0,875 contra 0,861).
+  - `executar()` devolve `previsoes`, `fluxo`, `num_caminhos`, `num_vertices`, `num_arestas` e `pesos`. `destaques()` devolve os alunos do lado da evasão e as arestas cortadas. `distancia(i, j)` dá o Gower de um par (exemplo dos "gêmeos").
+  - **Assortatividade (H5):** os valores oficiais 0,27 / 0,35 / 0,44 saem do kNN com k = 10, só treino, **pesos iguais e sem as taxas derivadas**: `GrafoSimilaridade(m, 10, pesos=dict.fromkeys(base.atributos(m), 1.0), incluir_derivados=False).construir(base, idx_teste=[])`. Com os pesos de IM, a assortatividade é maior.
 - **Viés λ:** cada aluno sem rótulo ganha S → u com capacidade λ·p e u → T com λ·(1 − p), sendo p a taxa de evasão do treino. Como p < 0,5, o viés puxa para T. Essa é a nossa leitura do plano v2, que não define p; `lam=0` desliga o viés.
 - **Contração:** com `contrair=True` (padrão), os rotulados são fundidos em S e T antes do fluxo, o que não muda o corte e reduz a rede.
 - No G1, vértice = posição do aluno no DataFrame filtrado (após remover `Enrolled` e `reset_index`), de 0 a 3.629. No G2 e no G3, vértices são `str`.
