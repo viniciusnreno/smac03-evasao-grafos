@@ -45,10 +45,10 @@ Associação, não causalidade.
 
 ### G3 · DAG de trajetórias
 
-- **Camadas:** L0 bolsa × faixa etária → L1 mensalidade × devedor → L2 aprovação S1 → L3 aprovação S2 → L4 desfecho. 23 vértices e 76 arcos no treino.
-- **Arcos:** transições observadas, com contagem e P(próximo | atual).
-- **Algoritmos:** ordenação topológica de **Kahn** (aula 3) e **Bellman-Ford / Dijkstra** com peso −ln p (aula 4) para a trajetória mais provável até a evasão.
-- **Como preditor:** o risco do aluno é a taxa de evasão do caminho dele no treino.
+- **Camadas:** INICIO → L0 bolsa × faixa etária (≤ 20, 21–23, > 23) → L1 mensalidade × devedor → L2 aprovação S1 → L3 aprovação S2 → L4 desfecho. Faixas de aprovação: sem inscrição, 0%, (0,50%), [50,100%), 100%. 22 estados + INICIO = 23 vértices e 76 arcos no treino.
+- **Arcos:** transições observadas, com contagem, P(próximo | atual) e taxa de evasão de quem passou pelo arco.
+- **Algoritmos:** ordenação topológica de **Kahn** (aula 3) e **Bellman-Ford** (aula 4), com os arcos em ordem topológica. A trajetória de maior risco é o caminho de INICIO até Dropout que maximiza o produto das taxas de evasão dos arcos (peso −ln da taxa suavizada por Laplace, (evasões + 1)/(n + 2), só arcos com ≥ 20 alunos). A mais segura usa a taxa de formatura até Graduate. Essa definição reproduz o `analise_v2` (risco 57/57, segura 13/319 no treino); com peso −ln P(próximo | atual) o resultado não bate.
+- **Como preditor:** o risco do aluno é a taxa de evasão, no treino, do trecho do caminho já conhecido no momento (T0: L0–L1; T1: até L2; T2: até L3). Se o trecho tem menos de 20 alunos, usa o trecho mais curto. Prevê evasão quando o risco passa da taxa de evasão do treino (limiar escolhido por CV contra 0,5).
 
 ### Fora do relatório
 
