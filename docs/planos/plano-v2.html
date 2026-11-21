@@ -1,0 +1,1023 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plano v2 · Evasão como problema de grafos (80/20, ablação, algoritmos de aula)</title><style>:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface-1:#fcfcfb; --surface-2:#f3f2ee;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s7:#6250d6;
+  --up:#e34948; --down:#2a78d6; --mid:#f0efec; --neutral:#a9a8a1;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-text:#006300;
+  --code:#f0efe9;
+  --accent-wash:rgba(42,120,214,0.08); --up-wash:rgba(227,73,72,0.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19; --surface-2:#232321;
+    --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s7:#9085e9;
+    --up:#e66767; --down:#3987e5; --mid:#383835; --neutral:#6b6a64;
+    --good-text:#0ca30c; --code:#232321;
+    --accent-wash:rgba(57,135,229,0.12); --up-wash:rgba(230,103,103,0.12);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface-1:#1a1a19; --surface-2:#232321;
+  --text-primary:#f0efec; --text-secondary:#c3c2b7; --text-muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s7:#9085e9;
+  --up:#e66767; --down:#3987e5; --mid:#383835; --neutral:#6b6a64;
+  --good-text:#0ca30c; --code:#232321;
+  --accent-wash:rgba(57,135,229,0.12); --up-wash:rgba(230,103,103,0.12);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--text-primary);
+  font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--s1)}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em}
+code{background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);padding:12px 14px;border-radius:8px;overflow:auto;font-size:13px;line-height:1.5}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:0;min-height:100vh}
+nav.toc{position:sticky;top:0;height:100vh;overflow:auto;padding:22px 16px;border-right:1px solid var(--border);background:var(--surface-1);font-size:13px}
+nav.toc .brand{font-weight:650;font-size:14px;margin-bottom:4px}
+nav.toc .sub{color:var(--text-muted);font-size:12px;margin-bottom:14px}
+nav.toc a{display:block;color:var(--text-secondary);text-decoration:none;padding:4px 8px;border-radius:6px}
+nav.toc a:hover{background:var(--surface-2);color:var(--text-primary)}
+nav.toc a.l2{padding-left:20px;font-size:12.5px}
+nav.toc .tbtn{margin-top:14px}
+main{padding:28px 40px 80px;max-width:1180px}
+header.hero{padding:8px 0 18px;border-bottom:1px solid var(--border);margin-bottom:22px}
+header.hero h1{font-size:28px;line-height:1.25;margin:6px 0 8px;letter-spacing:-.01em}
+header.hero .kicker{color:var(--text-muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.06em}
+header.hero p.lead{color:var(--text-secondary);font-size:16px;max-width:900px;margin:6px 0 0}
+section{margin:40px 0 0;scroll-margin-top:16px}
+section > h2{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+section > .sec-lead{color:var(--text-secondary);margin:0 0 16px;max-width:920px}
+h3{font-size:17px;margin:26px 0 8px}
+h4{font-size:14.5px;margin:18px 0 6px}
+p{margin:8px 0}
+.muted{color:var(--text-muted)} .sec{color:var(--text-secondary)}
+.small{font-size:13px}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:14px 0}
+.card h4:first-child,.card h3:first-child{margin-top:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.grid3,.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.layout{grid-template-columns:1fr} nav.toc{position:static;height:auto} main{padding:20px} .grid2,.grid3,.grid4{grid-template-columns:1fr}}
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.kpi .label{color:var(--text-secondary);font-size:12.5px}
+.kpi .value{font-size:28px;font-weight:600;line-height:1.2;margin-top:2px}
+.kpi .note{color:var(--text-muted);font-size:12px;margin-top:2px}
+.hero-fig{font-size:52px;font-weight:600;line-height:1}
+.pill{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--border);color:var(--text-secondary);background:var(--surface-2);white-space:nowrap}
+.pill.ok::before{content:"✓ ";color:var(--good-text);font-weight:700}
+.pill.no::before{content:"✕ ";color:var(--crit);font-weight:700}
+.pill.warn::before{content:"! ";color:#b07800;font-weight:800}
+.callout{border-left:3px solid var(--s1);background:var(--accent-wash);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0}
+.callout.risk{border-left-color:var(--up);background:var(--up-wash)}
+.callout > b:first-child{display:block;margin-bottom:2px}
+table.t{border-collapse:collapse;width:100%;font-size:13.2px;margin:8px 0}
+table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+table.t th{color:var(--text-secondary);font-weight:600;font-size:12.5px;background:var(--surface-2);position:sticky;top:0}
+table.t td.num,table.t th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tr:hover td{background:var(--surface-2)}
+.tablewrap{max-height:460px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chart-title{font-weight:600;font-size:14.5px}
+.chart-sub{color:var(--text-secondary);font-size:12.5px;margin-top:1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--text-secondary);margin:8px 0 4px}
+.legend .k{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.legend .ln{width:16px;height:2px;display:inline-block}
+.legend .dt{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:0 0 0 2px var(--surface-1)}
+.btn{font:inherit;font-size:12px;color:var(--text-secondary);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer}
+.btn:hover{color:var(--text-primary)}
+.btn[aria-pressed="true"]{background:var(--text-primary);color:var(--surface-1)}
+.seg{display:inline-flex;gap:4px;flex-wrap:wrap}
+.tip{position:fixed;pointer-events:none;z-index:50;background:var(--surface-1);color:var(--text-primary);border:1px solid var(--border);box-shadow:0 6px 24px rgba(0,0,0,.14);border-radius:8px;padding:8px 10px;font-size:12.5px;max-width:340px;opacity:0;transition:opacity .08s}
+.tip .tv{font-weight:650;font-size:14px}
+.tip .tl{color:var(--text-secondary)}
+.tip .row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+svg text{fill:var(--text-secondary);font-size:11.5px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+svg .tick text{fill:var(--text-muted);font-variant-numeric:tabular-nums}
+svg .gridline{stroke:var(--grid);stroke-width:1}
+svg .baseline{stroke:var(--axis);stroke-width:1}
+svg .hit{fill:transparent;cursor:default}
+svg .mark:hover,svg .mark.hl{filter:brightness(1.08)}
+svg .lbl-strong{fill:var(--text-primary);font-weight:600}
+details{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:8px 14px;margin:10px 0}
+details>summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--text-secondary)}
+details[open]>summary{margin-bottom:8px}
+.steps{counter-reset:st;list-style:none;padding:0;margin:8px 0}
+.steps>li{counter-increment:st;position:relative;padding:6px 0 6px 38px}
+.steps>li::before{content:counter(st);position:absolute;left:0;top:6px;width:26px;height:26px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:650;color:var(--text-secondary)}
+.flow{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}
+.flow .box{flex:1 1 150px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px}
+.flow .box b{display:block;font-size:13.5px}
+.flow .arrow{align-self:center;color:var(--text-muted);font-size:18px}
+.tag{font-size:11px;font-weight:650;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
+ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:2px 0}
+.verdict{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface-1);margin:8px 0}
+.verdict .ic{font-weight:800;font-size:16px;line-height:1.3;width:20px;text-align:center}
+.verdict.ok .ic{color:var(--good-text)} .verdict.no .ic{color:var(--crit)} .verdict.part .ic{color:#b07800}
+@media print{nav.toc{display:none}.layout{display:block}main{max-width:none}}
+</style></head>
+<body><div class="layout">
+<nav class="toc" aria-label="Sumário">
+  <div class="brand">Plano v2 · Evasão em grafos</div>
+  <div class="sub">SMAC03 · Cenário 3 · pós-consultoria</div>
+  <a href="#resumo">Resumo em 1 minuto</a>
+  <a href="#mudancas">O que mudou e como atendemos</a>
+  <a href="#hipoteses">Hipóteses e veredito 80/20</a>
+  <a href="#dados">Dados e curadoria</a>
+  <a href="#fatores">O que aumenta/diminui a evasão</a>
+  <a class="l2" href="#principal">Característica principal</a>
+  <a class="l2" href="#interacoes">Como os fatores se entrelaçam</a>
+  <a href="#ablacao">Ablação de parâmetros</a>
+  <a href="#algoritmos">Algoritmos de aula: o cardápio</a>
+  <a href="#modelos">Os 4 grafos do projeto</a>
+  <a class="l2" href="#mincut">G1 · Similaridade + corte mínimo</a>
+  <a class="l2" href="#chowliu">G2 · Árvore de dependências</a>
+  <a class="l2" href="#dag">G3 · DAG de trajetórias</a>
+  <a class="l2" href="#hipercubo">G4 · Grafo de perfis</a>
+  <a class="l2" href="#gemeos">Assortatividade e "gêmeos"</a>
+  <a href="#prova">A prova 80/20</a>
+  <a href="#louvain">Por que não Louvain</a>
+  <a href="#crisp">CRISP-NET fase a fase</a>
+  <a href="#plano">Plano até 22/11</a>
+  <a href="#relatorio">Relatório e slides</a>
+  <a href="#limites">Limitações e riscos</a>
+  <a href="#refs">Referências e reprodutibilidade</a>
+  <div class="tbtn"><button class="btn" id="themeBtn" type="button">Alternar tema claro/escuro</button></div>
+</nav>
+<main>
+<header class="hero">
+  <div class="kicker">SMAC03 · Grafos · Cenário 3 · Plano de trabalho v2 · 20/11/2026</div>
+  <h1>Evasão como problema de grafos: o que aprender com 80% dos alunos e provar nos outros 20%</h1>
+  <p class="lead">Este plano substitui o anterior (grafo temporal + Louvain). Ele segue os cinco pontos da consultoria: tira quem ainda está matriculado, testa parâmetro por parâmetro, identifica a característica principal da evasão, separa 80/20 para provar a hipótese e troca o Louvain por algoritmos vistos em aula. Todos os números abaixo foram calculados de verdade sobre o dataset UCI 697, com split estratificado fixo (seed 42). Nada foi estimado.</p>
+</header>
+
+<section id="resumo">
+  <div class="grid4">
+    <div class="kpi"><div class="label">Alunos analisados</div><div class="value">3.630</div><div class="note">794 "Enrolled" removidos de 4.424</div></div>
+    <div class="kpi"><div class="label">Taxa de evasão (base)</div><div class="value">39,15%</div><div class="note">1.421 Dropout × 2.209 Graduate</div></div>
+    <div class="kpi"><div class="label">Direções que se repetem no teste</div><div class="value">96%</div><div class="note">dos efeitos significativos no treino (n<sub>teste</sub> ≥ 20)</div></div>
+    <div class="kpi"><div class="label">Corte mínimo no teste, fim do S1</div><div class="value">0,847</div><div class="note">acurácia balanceada (base = 0,500)</div></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Resumo em 1 minuto</h3>
+    <ul class="tight">
+      <li><b>Característica principal:</b> o <b>desempenho no 1º ano</b>. Quem é aprovado em menos da metade das disciplinas do 1º semestre evade em <b>99%</b> (0% aprovado) a <b>98%</b> (até 50%) dos casos. Quem aprova tudo evade em só 10%. Antes de existir nota, o sinal mais forte é <b>financeiro</b>: com mensalidade atrasada, 94% evadem. Também pesam a idade de ingresso (23 anos ou mais), não ter bolsa, o curso e o modo de ingresso.</li>
+      <li><b>O que aumenta a evasão:</b> mensalidade atrasada (×2,4), ser devedor (×1,9), ter 23 anos ou mais no ingresso (×1,5 a ×1,6), entrar pelo concurso "maiores de 23" (×1,7), gênero masculino (×1,5), curso noturno (×1,3) e reprovação no S1/S2 (×2,5). <b>O que diminui:</b> ser bolsista (×0,35), aprovar 100% (×0,26 no S1, ×0,18 no S2), ter 17–19 anos no ingresso (×0,65) e Enfermagem ou Serviço Social (×0,46 e ×0,56).</li>
+      <li><b>A hipótese aprendida nos 80% vale nos 20%:</b> o ranking de importância (informação mútua) tem correlação de Spearman <b>0,96</b> entre treino e teste, e 96% das direções significativas se repetem.</li>
+      <li><b>Ablação:</b> os macroeconômicos (desemprego, inflação, PIB, que no fundo identificam a coorte), nacionalidade, internacional, necessidades especiais, ordem de opção, turno e disciplinas creditadas ou sem avaliação <b>não mudam nada</b> quando são removidos (Δ ≈ 0). Grupos essenciais: <b>financeiro</b> em todos os momentos e <b>acadêmico</b> assim que existe.</li>
+      <li><b>Algoritmo de grafo (sem Louvain, sem ML):</b> o classificador central é o <b>corte mínimo por fluxo máximo (Edmonds–Karp, aula 6)</b> sobre um grafo de similaridade entre alunos. No teste ele chega a acurácia balanceada de 0,763 / 0,847 / 0,899 (ingresso / fim do S1 / fim do S2). Ele supera com significância a melhor regra de uma variável no ingresso (+10 p.p.) e no S2, e empata estatisticamente no S1. Três grafos completam a explicação: a árvore geradora máxima (Kruskal, aula 5), o DAG de trajetórias (ordenação topológica e caminho mínimo, aulas 3 e 4) e o grafo de perfis (BFS e Dijkstra, aulas 2.7 e 4).</li>
+      <li><b>Achado honesto:</b> no fim do 2º semestre, uma regra simples ("aprovou menos de 79% no S2") já acerta 0,892. Ali o grafo quase não acrescenta, porque o S2 já carrega o desfecho. O valor do grafo está no <b>alerta precoce</b> (ingresso e S1) e na <b>explicação</b> (trajetórias, dependências, perfis vizinhos).</li>
+    </ul>
+  </div>
+</section>
+
+<section id="mudancas">
+  <h2>O que mudou e como cada ponto da consultoria é atendido</h2>
+  <p class="sec-lead">Cada pedido do professor virou uma decisão verificável no código, com seu próprio resultado nesta página.</p>
+  <div class="tablewrap"><table class="t">
+    <thead><tr><th>Pedido da consultoria</th><th>Decisão no plano v2</th><th>Evidência</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Desconsiderar quem ainda está na graduação</td><td>Removemos os 794 "Enrolled". O problema fica binário: Dropout (1.421) × Graduate (2.209). Justificativa CRISP-NET: o objeto sem rótulo final é ignorado (slides XMCO09, seleção e qualidade).</td><td><a href="#dados">Dados</a></td><td><span class="pill ok">feito</span></td></tr>
+      <tr><td>Reconsiderar os parâmetros e testar se ter ou não cada um muda algo</td><td>Ablação com o grafo final em CV 5-fold dentro do treino: tira um grupo por vez (7 grupos), uma variável por vez (36) e faz eliminação backward. Classificamos cada parâmetro como essencial, neutro ou prejudicial.</td><td><a href="#ablacao">Ablação</a></td><td><span class="pill ok">feito</span></td></tr>
+      <tr><td>Achar a característica principal de quem teve dropout</td><td>Informação mútua, lift e V de Cramér por variável. Regra de 1 característica aprendida no treino e aplicada no teste, em cada momento (ingresso, S1, S2). Perfil típico do evadido × formado.</td><td><a href="#principal">Característica principal</a></td><td><span class="pill ok">feito</span></td></tr>
+      <tr><td>80% para aprender e 20% para provar a hipótese</td><td>Split estratificado fixo (2.904 / 726, seed 42, salvo em <code>split.csv</code>). Toda escolha (faixas, k, pesos, limiares, variáveis) sai só do treino, com CV interna. O teste é usado uma única vez. A robustez vem de mais 10 splits 80/20.</td><td><a href="#prova">Prova 80/20</a></td><td><span class="pill ok">feito</span></td></tr>
+      <tr><td>Trocar o Louvain por algoritmo de aula, focado em grafos e não em ML/IA</td><td>Núcleo: <b>fluxo máximo / corte mínimo (Edmonds–Karp)</b>. Apoio: <b>Kruskal</b> (árvore geradora máxima), <b>Kahn + Dijkstra/Bellman-Ford</b> (DAG), <b>BFS/componentes + Dijkstra</b> (perfis). A regressão logística só aparece como régua externa.</td><td><a href="#algoritmos">Algoritmos</a></td><td><span class="pill ok">feito</span></td></tr>
+    </tbody></table></div>
+  <div class="callout"><b>O que reaproveitamos do plano anterior</b>A ideia de <b>momentos</b> (T0 ingresso, T1 fim do S1, T2 fim do S2) continua. Ela vira os "snapshots" de cada análise e responde quando o risco aparece. Também ficam a similaridade de Gower, o grafo kNN, a assortatividade com teste de permutação e a divisão de papéis. O que sai é o Louvain, as comunidades e o grafo de transição entre comunidades. Este último é trocado pelo DAG de trajetórias, que usa estados interpretáveis em vez de comunidades.</div>
+</section>
+
+<section id="hipoteses">
+  <h2>Pergunta, hipóteses e veredito no teste (20%)</h2>
+  <div class="callout"><b>Pergunta principal (proposta)</b>Quais características, e em que combinação e momento da trajetória, distinguem quem evade de quem se forma? Uma representação em grafo aprendida com 80% dos alunos consegue identificar os outros 20% melhor que os indicadores isolados?</div>
+  <div class="verdict ok"><div class="ic">✓</div><div><b>H1. Existe uma característica dominante, e ela é acadêmica.</b> A taxa de aprovação no S1/S2 tem a maior informação mútua com o desfecho (0,47 bits no S2 e 0,38 no S1, contra 0,15 da mensalidade). A regra "aprovou menos de 78% no S1" chega a acurácia balanceada de <b>0,848</b> no teste. Nos 10 splits a média é 0,839 ± 0,015, e a mesma variável foi escolhida nos 10.</div></div>
+  <div class="verdict ok"><div class="ic">✓</div><div><b>H2. A direção de cada fator, aprendida no treino, se mantém no teste.</b> 96,2% das faixas significativas no treino têm a mesma direção no teste (88,1% considerando todas). O ranking de informação mútua tem Spearman de 0,958, e 8 das 10 variáveis do topo coincidem.</div></div>
+  <div class="verdict ok"><div class="ic">✓</div><div><b>H3. Parte dos parâmetros pode sair sem perda.</b> Na ablação do grafo, os grupos <i>macro</i>, <i>demográfico</i>, <i>família</i> e <i>ingresso</i> são neutros a partir de T1 (|Δ| dentro do ruído). Entre as variáveis, 15 a 20 por momento têm Δ ≈ 0. Só <i>financeiro</i> e <i>acadêmico</i> são essenciais (p<sub>Holm</sub> &lt; 0,05 para acadêmico S1 e S2).</div></div>
+  <div class="verdict part"><div class="ic">≈</div><div><b>H4. O grafo aprendido nos 80% supera indicadores isolados nos 20%.</b> Confirmada no ingresso e no S2. O corte mínimo marca 0,763 contra 0,664 da melhor regra de 1 variável em T0 (McNemar p<sub>Holm</sub> = 0,012) e 0,899 contra 0,860 em T2 (p<sub>Holm</sub> = 0,0007). No S1 ele fica à frente (0,847 contra 0,825), mas <b>sem significância</b> (p<sub>Holm</sub> = 0,41), porque a aprovação no S1 sozinha já é muito forte. A regressão logística de referência fica 0,5 a 3,7 p.p. acima (0,768 / 0,884 / 0,924). A diferença só é significativa em T1 (p<sub>Holm</sub> = 0,02). É o preço de uma solução 100% grafo e interpretável.</div></div>
+  <div class="verdict ok"><div class="ic">✓</div><div><b>H5. Alunos parecidos têm desfechos parecidos, e isso cresce ao longo da trajetória.</b> A assortatividade do desfecho no grafo kNN (só treino) vai de <b>0,27</b> (ingresso) para <b>0,35</b> (S1) e <b>0,44</b> (S2). Em 200 embaralhamentos o máximo foi 0,03 (p = 0,005). O maior salto acontece no 1º semestre.</div></div>
+  <p class="small muted">Leitura: ✓ = confirmada no teste; ≈ = confirmada em parte. As hipóteses são associações, não causalidade (ver <a href="#limites">limitações</a>).</p>
+</section>
+
+<section id="dados">
+  <h2>Dados e curadoria</h2>
+  <p class="sec-lead">Dataset UCI 697 (Realinho et al., 2022): 4.424 matrículas de 17 cursos de graduação do Instituto Politécnico de Portalegre, Portugal, coortes de 2008/09 a 2018/19. São 36 atributos, sem valores ausentes e sem duplicatas.</p>
+  <div class="grid3">
+    <div class="card"><h4>1. Filtro</h4><p>Saem os 794 <code>Enrolled</code>, que não têm desfecho. Ficam <b>3.630</b> alunos com taxa de evasão de 39,15%. O treino tem 2.904 alunos (39,15%) e o teste 726 (39,12%), o que mostra a estratificação preservada.</p></div>
+    <div class="card"><h4>2. Momentos (snapshots)</h4><p><b>T0 ingresso</b>: demográfico, família, ingresso, macro e financeiro, 24 variáveis. <b>T1</b>: T0 + 6 do S1 (30). <b>T2</b>: T1 + 6 do S2 (36). Cada análise roda nos três momentos e responde "quão cedo dá para saber?".</p></div>
+    <div class="card"><h4>3. Derivadas</h4><p>Taxa de aprovação do semestre = aprovadas / inscritas. Ela fica indefinida quando o aluno tem 0 inscritas (118 no treino, com 53% de evasão), caso tratado como faixa própria "sem inscrição". Faixas e limiares foram definidos <b>só no treino</b>.</p></div>
+  </div>
+  <div class="callout risk"><b>Três armadilhas que o relatório precisa declarar</b>
+  <ol style="margin:4px 0 0;padding-left:20px">
+    <li><b>S2 "contém" o desfecho.</b> Quem evadiu durante o 1º ano aparece com 0 inscritas ou 0 aprovadas no S2: 100% dos 514 alunos do treino com 0% de aprovação no S2 evadiram. É um vazamento temporal parcial. Por isso o resultado de referência para alerta precoce é o <b>T1</b>, e o T2 serve de teto.</li>
+    <li><b>Mensalidade e devedor podem ter sido medidos depois do ingresso</b> (o artigo do dataset não fixa a data). Mantemos esses dados em T0, mas o relatório deve chamá-los de "situação financeira registrada", não de "condição na matrícula".</li>
+    <li><b>Desemprego, inflação e PIB têm só 10 valores</b>, um por coorte. São um código de ano, não um efeito econômico individual. A ablação confirma que eles não fazem diferença.</li>
+  </ol></div>
+  <details><summary>Códigos úteis para ler as tabelas (dicionário UCI 697)</summary>
+  <p class="small">Gênero: 1 = masculino, 0 = feminino. Turno: 1 = diurno, 0 = noturno. Bolsista, Devedor, Deslocado e Internacional: 1 = sim. Mensalidade em dia: 1 = sim. Modo de ingresso: 1 = 1ª fase do contingente geral; 17 = 2ª fase; 18 = 3ª fase; 39 = maiores de 23 anos; 42 = transferência; 43 = mudança de curso; 7 = titular de outro curso superior; 44 = diploma de especialização tecnológica; 51 = mudança de instituição/curso. Cursos: 9500 Enfermagem; 9238 Serviço Social; 8014 Serviço Social (noturno); 9147 Gestão; 9991 Gestão (noturno); 9119 Engenharia Informática; 9003 Agronomia; 9130 Equinicultura; 9853 Educação Básica; 9254 Turismo; 9670 Publicidade e Marketing; 9773 Jornalismo e Comunicação; 9070 Design de Comunicação; 171 Design de Animação e Multimédia; 9085 Enfermagem Veterinária; 9556 Higiene Oral; 33 Tecnologias de Produção de Biocombustíveis. Notas de ingresso: 0–200. Notas de disciplina: 0–20.</p></details>
+</section>
+
+<section id="fatores">
+  <h2>O que aumenta e o que diminui a evasão</h2>
+  <p class="sec-lead">Cada barra é o <b>lift no treino</b> (taxa de evasão do grupo ÷ 39,15%), em escala logarítmica centrada em ×1. O ponto preto é o <b>mesmo lift calculado no teste</b>, sem nada reajustado. Quando o ponto cai perto da ponta da barra, o efeito se replicou.</p>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Lift da evasão por característica: treino (barra) × teste (ponto)</div><div class="chart-sub">Vermelho = aumenta a evasão; azul = diminui. Passe o mouse para ver taxas e tamanhos de amostra.</div></div></div>
+    <div id="legLift"></div>
+    <div class="chart" id="chLift"></div>
+    <div id="tabLift"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h4>Perfil típico do evadido × formado (treino)</h4>
+      <table class="t"><thead><tr><th>Característica</th><th class="num">Evadidos</th><th class="num">Formados</th></tr></thead><tbody>
+      <tr><td>Mensalidade atrasada</td><td class="num">31,7%</td><td class="num">1,3%</td></tr>
+      <tr><td>Bolsista</td><td class="num">9,5%</td><td class="num">38,9%</td></tr>
+      <tr><td>Idade no ingresso ≥ 23</td><td class="num">51,5%</td><td class="num">20,0%</td></tr>
+      <tr><td>Gênero masculino</td><td class="num">48,1%</td><td class="num">23,4%</td></tr>
+      <tr><td>Devedor</td><td class="num">22,0%</td><td class="num">4,5%</td></tr>
+      <tr><td>Ingresso "maiores de 23"</td><td class="num">30,7%</td><td class="num">10,7%</td></tr>
+      <tr><td>Ingresso 1ª fase geral</td><td class="num">25,0%</td><td class="num">48,4%</td></tr>
+      <tr><td>Zero aprovações no S1</td><td class="num">39,4%</td><td class="num">3,2%</td></tr>
+      <tr><td>Aprovou 100% no S1</td><td class="num">11,4%</td><td class="num">64,4%</td></tr>
+      <tr><td>Curso noturno</td><td class="num">14,8%</td><td class="num">9,3%</td></tr>
+      </tbody></table>
+      <p class="small sec">Em palavras: o evadido típico é mais velho no ingresso, sem bolsa, com maior chance de mensalidade atrasada e de ter entrado pelo concurso de maiores de 23. Já no 1º semestre, ele aprova pouco ou nada. Entre os inscritos com 0 aprovações no S1, <b>99,5%</b> evadiram (n = 387).</p>
+    </div>
+    <div class="card"><h4>Ranking por informação mútua com o desfecho</h4>
+      <p class="small sec">IM em bits, treino × teste. A ordem praticamente não muda (Spearman 0,96).</p>
+      <div id="tabVars"></div>
+    </div>
+  </div>
+
+  <h3 id="principal">A característica principal, testada como hipótese de 1 variável</h3>
+  <p>Para cada momento, buscamos <b>no treino</b> a melhor regra simples "se X, então evade", escolhida por acurácia balanceada em CV 5-fold. Depois aplicamos a regra no teste. É a forma mais direta de "provar" a característica principal, e serve de régua para o grafo.</p>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Momento</th><th>Regra aprendida no treino</th><th class="num">CV treino</th><th class="num">Teste: bal. acc</th><th class="num">IC 95%</th><th class="num">Recall evasão</th><th class="num">Precisão evasão</th><th class="num">10 splits (média ± dp)</th></tr></thead><tbody>
+  <tr><td>T0 ingresso</td><td>idade_ingresso em {23-27, 28+} -&gt; Dropout</td><td class="num">0,657</td><td class="num"><b>0,662</b></td><td class="num">0,628–0,697</td><td class="num">0,503</td><td class="num">0,644</td><td class="num">0,661 ± 0,015</td></tr>
+  <tr><td>T1 fim do S1</td><td>taxa_aprov_s1 &lt; 0.782 -&gt; Dropout (ou sem inscricao)</td><td class="num">0,841</td><td class="num"><b>0,848</b></td><td class="num">0,822–0,874</td><td class="num">0,810</td><td class="num">0,821</td><td class="num">0,839 ± 0,015</td></tr>
+  <tr><td>T2 fim do S2</td><td>taxa_aprov_s2 &lt; 0.793 -&gt; Dropout (ou sem inscricao)</td><td class="num">0,868</td><td class="num"><b>0,892</b></td><td class="num">0,868–0,916</td><td class="num">0,898</td><td class="num">0,836</td><td class="num">0,870 ± 0,011</td></tr>
+  </tbody></table></div>
+  <p class="small sec">No ingresso, a idade disputa com a mensalidade atrasada: no split oficial elas ficam quase empatadas (teste 0,662 contra 0,664), e nos 10 splits a idade venceu 8 vezes e a mensalidade 2. As duas regras de T0 ficam só em ~0,66, ou seja, <b>nenhuma variável isolada basta no ingresso</b>. Esse é o argumento central para combinar fatores num grafo.</p>
+
+  <h3 id="interacoes">Como os fatores se entrelaçam (combinações e confundimento)</h3>
+  <p>O cenário pede para mostrar como os fatores se combinam. Fizemos dois testes no treino, conferidos no teste.</p>
+  <div class="grid2">
+    <div class="card"><h4>Pares de fatores que reforçam o risco</h4>
+      <p class="small sec">Sinergia = taxa de evasão com A e B juntos − maior taxa entre A sozinho e B sozinho. Valores positivos indicam que a combinação piora além do pior fator isolado. Pares com n<sub>treino</sub> ≥ 30.</p>
+      <div id="tabSyn"></div>
+      <p class="small sec">Em 87% dos 55 pares, o sinal da interação se repetiu no teste. Os pares mais fortes envolvem gênero masculino ou devedor <i>junto</i> com idade alta ou ingresso de maiores de 23. Já <b>noturno + idade ≥ 23</b> evade <i>menos</i> que idade ≥ 23 sozinha (53% contra 62%), um efeito protetor do curso noturno para o adulto trabalhador.</p>
+    </div>
+    <div class="card"><h4>O efeito sobrevive quando controlamos outro fator?</h4>
+      <div id="tabStrat"></div>
+      <p class="small sec"><b>Leitura:</b> a bolsa protege mesmo dentro de quem está com a mensalidade em dia (11% contra 39%). Ser <b>devedor</b> só pesa quando a mensalidade está em dia, e com ela atrasada o risco já está no teto (~94%). O efeito do <b>gênero</b> desaparece entre quem reprovou no S1 (91% contra 91%) e só existe entre quem foi aprovado (36% contra 18%). A <b>idade</b> pesa nos dois estratos. É isso que um relatório de variáveis isoladas não mostra.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ablacao">
+  <h2>Ablação: ter ou não ter cada parâmetro muda algo?</h2>
+  <p class="sec-lead">Usamos o classificador final (corte mínimo no grafo kNN) e a CV 5-fold <b>dentro do treino</b>. Tiramos um parâmetro e medimos Δ acurácia balanceada = (sem) − (com). Barra à esquerda: remover piora, então o parâmetro ajuda. Barra perto de zero: tanto faz. Barra à direita: remover melhora. A cor separa essencial (azul), neutro (cinza) e prejudicial (laranja), com o critério de IC 95% das dobras.</p>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Ablação por grupo de variáveis</div><div class="chart-sub">Δ acurácia balanceada em pontos percentuais, média ± dp nas 5 dobras</div></div>
+      <div class="seg" id="segLogo"></div></div>
+    <div class="chart" id="chLogo"></div>
+  </div>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Ablação variável a variável (leave-one-feature-out)</div><div class="chart-sub">Ordenado do mais essencial para o mais dispensável</div></div>
+      <div class="seg" id="segLofo"></div></div>
+    <div id="legLofo"></div>
+    <div class="chart" id="chLofo"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h4>Decisão proposta de parâmetros</h4>
+      <ul class="tight">
+        <li><span class="pill ok">manter</span> <b>Financeiro</b> (mensalidade, devedor, bolsa): essencial em T0, T1 e T2.</li>
+        <li><span class="pill ok">manter</span> <b>Acadêmico</b> do semestre disponível: aprovadas e média. As demais colunas acadêmicas são redundantes com essas (a árvore de dependências mostra isso).</li>
+        <li><span class="pill ok">manter em T0</span> <b>Ingresso</b> (curso, modo) e <b>família</b>: ajudam só enquanto não há nota. Em T1/T2 ficam neutros.</li>
+        <li><span class="pill no">remover</span> <b>Macro</b> (desemprego, inflação, PIB), nacionalidade, internacional, necessidades especiais, ordem de opção, turno, disciplinas creditadas e sem avaliação: Δ ≈ 0 em todos os momentos.</li>
+      </ul>
+      <p class="small sec">A ablação mede o efeito <i>no classificador</i>. Uma variável neutra aqui (ex.: turno) ainda pode ter efeito descritivo (lift ×1,3), porque outra variável já carrega a mesma informação. É a diferença entre ser <b>relevante</b> e ser <b>insubstituível</b>.</p></div>
+    <div class="card"><h4>Como apresentar isso ao professor</h4>
+      <p>Em termos de grafo, retirar um parâmetro <b>muda as arestas</b> do grafo de similaridade. A pergunta vira: "a estrutura de vizinhança que separa evadidos de formados depende deste atributo?". Medimos isso de três formas:</p>
+      <ol class="tight"><li>Δ desempenho do corte mínimo (esta seção);</li><li>Δ assortatividade do desfecho no grafo kNN;</li><li>se o atributo é vizinho do nó <i>Desfecho</i> na árvore geradora máxima (<a href="#chowliu">G2</a>).</li></ol>
+      <p class="small sec">Nos dados, os três critérios apontam os mesmos essenciais: aprovação, mensalidade e bolsa.</p></div>
+  </div>
+<div class="callout"><b>Eliminação backward: com quantas variáveis o grafo funciona?</b>Removendo, uma a uma, a variável cuja saída menos piora a CV, até a perda passar de 1 desvio-padrão:
+<ul class="tight"><li><b>T0 ingresso, 8 variáveis:</b> mensalidade em dia, bolsista, curso, modo de ingresso, idade, gênero, escolaridade e ocupação da mãe. No teste: 0,740, contra 0,763 com as 24.</li>
+<li><b>T1 fim do S1, 3 variáveis:</b> mensalidade em dia, S1 aprovadas e S1 avaliações. No teste: <b>0,858</b>, contra 0,847 com as 30.</li>
+<li><b>T2 fim do S2, 7 variáveis:</b> curso, devedor, mensalidade, bolsa, S1 aprovadas, S2 aprovadas e S2 média. No teste: 0,893, contra 0,899 com as 36.</li></ul>
+Essa é a resposta mais direta ao "ver se muda algo ter ou não o parâmetro": <b>a maior parte dos 36 parâmetros não muda nada</b>.</div>
+</section>
+
+
+<section id="algoritmos">
+  <h2>Algoritmos de aula: o cardápio e o que escolhemos</h2>
+  <p class="sec-lead">Levantamento feito lendo as 7 aulas de SMAC03 e os slides de CRISP-NET. A coluna "aula" diz onde o conteúdo está. Quando algo não está nos slides, a tabela avisa.</p>
+  <div class="tablewrap"><table class="t">
+  <thead><tr><th>Algoritmo / conceito</th><th>Aula</th><th>Uso no projeto</th><th>Encaixe</th><th>Decisão</th></tr></thead><tbody>
+  <tr><td><b>Ford–Fulkerson / Edmonds–Karp</b>, super-fonte e super-sumidouro</td><td>6 · Fluxo em Redes</td><td>Classificar os alunos do teste pelo corte mínimo entre "evadidos conhecidos" e "formados conhecidos" (G1)</td><td>alta</td><td><span class="pill ok">núcleo</span></td></tr>
+  <tr><td><b>Kruskal</b> (árvore geradora <i>máxima</i>, citada no slide) + union-find</td><td>5 · Árvores Geradoras</td><td>Árvore de dependências entre fatores e desfecho (Chow–Liu, G2)</td><td>alta</td><td><span class="pill ok">usar</span></td></tr>
+  <tr><td><b>Ordenação topológica (Kahn/DFS)</b></td><td>3 · Ord. Topológica</td><td>Validar o DAG de trajetórias e ordenar a programação dinâmica (G3)</td><td>alta</td><td><span class="pill ok">usar</span></td></tr>
+  <tr><td><b>Dijkstra / Bellman-Ford</b> (peso −ln p)</td><td>4 · Caminho Mínimo</td><td>Trajetória mais provável até a evasão (G3) e caminho mínimo de intervenção (G4)</td><td>alta</td><td><span class="pill ok">usar</span></td></tr>
+  <tr><td><b>BFS / DFS, componentes conexas</b></td><td>2.6 Conectividade, 2.7 Busca</td><td>Regiões de risco no grafo de perfis (G4), base do Edmonds–Karp (BFS no residual)</td><td>alta</td><td><span class="pill ok">usar</span></td></tr>
+  <tr><td>Isomorfismo e invariantes; hipercubo Q<sub>k</sub></td><td>2.3 Isomorfismo</td><td>O grafo de perfis é um subgrafo de Q<sub>6</sub>. Invariantes (n, m, graus, componentes) comparam as estruturas de evasão e de sucesso</td><td>média</td><td><span class="pill">texto</span></td></tr>
+  <tr><td>Coloração / 2-coloração</td><td>3 · Coloração</td><td>Pouco natural aqui. Possível ilustração: arestas "discordantes" entre alunos semelhantes</td><td>baixa</td><td><span class="pill no">fora</span></td></tr>
+  <tr><td>Planaridade, Euler, Hamilton</td><td>2.4, 2.5</td><td>Sem aplicação direta (só desenho)</td><td>baixa</td><td><span class="pill no">fora</span></td></tr>
+  <tr><td>Louvain / modularidade</td><td>— (artigo do prof.)</td><td>Pedido para não usar. As comunidades não usam o desfecho e não "provam" nada no 80/20</td><td>—</td><td><span class="pill no">fora</span></td></tr>
+  </tbody></table></div>
+  <div class="callout"><b>Dois avisos do levantamento</b>(1) O <b>teorema fluxo-máximo/corte-mínimo</b> e a extração do corte <b>não aparecem nos slides</b> da aula 6, que tratam de Ford–Fulkerson, rede residual e múltiplas fontes/sumidouros. É preciso citar Cormen et al. (cap. 26) e mostrar que o corte sai de <b>uma BFS no residual final</b> (aula 2.7). (2) O <b>Floyd–Warshall</b> e o <b>clustering por MST</b> também não estão nos slides. Por isso não os usamos.</div>
+</section>
+
+<section id="modelos">
+  <h2>Os 4 grafos do projeto</h2>
+  <p class="sec-lead">Cada grafo responde a uma parte do cenário. Nenhuma aresta de nenhum deles usa o desfecho dos alunos de teste.</p>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Grafo</th><th>Vértices</th><th>Arestas e pesos</th><th>Algoritmo de aula</th><th>Responde</th></tr></thead><tbody>
+  <tr><td><b>G1</b> Similaridade + corte</td><td>Alunos (treino rotulado + teste) + S + T</td><td>kNN por Gower, capacidade = similaridade. S→evadidos e formados→T com capacidade ∞</td><td>Edmonds–Karp, corte s-t</td><td>Quem está em risco? (prova 80/20)</td></tr>
+  <tr><td><b>G2</b> Dependências</td><td>38 variáveis + nó Desfecho</td><td>Informação mútua entre pares</td><td>Kruskal (árvore máxima)</td><td>Como os fatores dependem uns dos outros?</td></tr>
+  <tr><td><b>G3</b> Trajetórias</td><td>Estados: ingresso → financeiro → S1 → S2 → desfecho</td><td>Transições observadas: n e P(próximo | atual)</td><td>Kahn + Dijkstra/Bellman-Ford</td><td>Por quais caminhos se chega à evasão? Onde está o ponto de virada?</td></tr>
+  <tr><td><b>G4</b> Perfis</td><td>Combinações de 6 flags de risco (n ≥ 10)</td><td>Hamming 1 (diferem em 1 flag)</td><td>BFS/componentes + Dijkstra</td><td>Quais perfis concentram risco? Qual a menor mudança que leva a um perfil seguro?</td></tr>
+  </tbody></table></div>
+
+  <h3 id="mincut">G1 · Grafo de similaridade + corte mínimo (o classificador central)</h3>
+  <div class="grid2">
+    <div class="card"><h4>Modelo formal</h4>
+      <p>Seja <i>L</i> o conjunto de alunos de treino, com rótulo, e <i>U</i> o de alunos a classificar, sem rótulo. A distância de Gower entre <i>i</i> e <i>j</i> no momento <i>t</i> é a média, sobre as variáveis de <i>A<sub>t</sub></i>, de |x<sub>i</sub> − x<sub>j</sub>| / amplitude<sub>treino</sub> (numéricas) ou [x<sub>i</sub> ≠ x<sub>j</sub>] (nominais). Cada variável pode ter peso igual à sua informação mútua com o desfecho, calculada no fold de treino. A similaridade é s = 1 − d.</p>
+      <p>Rede de fluxo <i>N = (V, E, c)</i>, com <i>V = L ∪ U ∪ &#123;S, T&#125;</i>:</p>
+      <ul class="tight">
+        <li>aresta &#123;i, j&#125; se <i>j</i> está entre os <i>k</i> mais similares de <i>i</i> ou o contrário; capacidade c = s(i,j) nos dois sentidos;</li>
+        <li>S → i com c = ∞ para todo evadido de treino, e i → T com c = ∞ para todo formado de treino (super-fonte e super-sumidouro, aula 6);</li>
+        <li>variante com viés: cada <i>u ∈ U</i> recebe arcos fracos u → T e S → u, com capacidade λ·q e λ·(1−q), para regular a cautela do classificador.</li>
+      </ul>
+      <p>Edmonds–Karp encontra o fluxo máximo. Uma BFS no residual final dá o lado de S. <b>Quem fica do lado de S é previsto como evasão.</b> A intuição é que o corte mínimo corta as ligações mais fracas entre o "mundo dos evadidos" e o "mundo dos formados". Cada aluno não rotulado vai para o lado ao qual está mais fortemente ligado, considerando também os vizinhos não rotulados (Blum e Chawla, 2001).</p>
+    </div>
+    <div class="card"><h4>Esquema</h4>
+      <div class="chart" id="chFlowSchema"></div>
+      <p class="small sec">Configuração escolhida só por CV no treino: k = 25 em T1 (k = 25 em T0, 40 em T2), similaridade linear, pesos por informação mútua e viés λ = 1.0. O grafo completo tem cerca de 3.630 vértices e mais de 100 mil arcos, e o fluxo roda em segundos ou menos.</p>
+      <pre>def edmonds_karp(cap, s, t):   # aula 6 + BFS (2.7)
+    fluxo = 0
+    while (caminho := bfs_residual(cap, s, t)):
+        gargalo = min(cap[u][v] for u, v in caminho)
+        for u, v in caminho:
+            cap[u][v] -= gargalo; cap[v][u] += gargalo
+        fluxo += gargalo
+    lado_S = bfs_alcancaveis(cap, s)  # corte mínimo
+    return fluxo, lado_S  # U ∩ lado_S = evasão</pre>
+      <p class="small sec"><b>Truque de eficiência:</b> como S→evadidos e formados→T têm capacidade ∞, todos os evadidos de treino podem ser <b>contraídos</b> em S e todos os formados em T. Em T0 o grafo cai de 3.632 vértices e 128.940 arcos para 728 vértices e 6.306 arcos, sem mudar o corte. A nossa implementação de Edmonds–Karp (1206 caminhos aumentantes) deu o mesmo valor de corte e <b>0 previsões diferentes</b> do networkx e do scipy.</p>
+    </div>
+  </div>
+
+  <h3 id="chowliu">G2 · Árvore de dependências entre fatores (Kruskal, árvore geradora máxima)</h3>
+  <p>Cada variável vira um vértice, mais o vértice <b>DESFECHO</b>. O grafo completo tem peso = informação mútua entre os dois atributos, no treino. O <b>Kruskal com ordenação decrescente</b> devolve a árvore geradora máxima, que é a árvore de Chow e Liu (1968): o "esqueleto" de dependências mais forte que liga todos os fatores sem ciclos. Os vizinhos diretos do desfecho são os fatores com informação própria. Os demais ligam-se a ele <i>através</i> de outros fatores.</p>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Árvore geradora máxima de informação mútua (treino)</div><div class="chart-sub">Raiz = DESFECHO. A espessura é proporcional à IM. A opacidade mostra a estabilidade da aresta em 100 bootstraps. Arestas vermelhas tocam o desfecho.</div></div><div class="seg" id="segCL"></div></div>
+    <div class="chart" id="chCL"></div>
+    <div class="grid3 small" style="margin-top:8px">
+      <div><b>T0 (ingresso)</b>: vizinhos do desfecho = Mensalidade em dia (0,149 bits, estab. 100%), Curso (0,090 bits, estab. 84%), Bolsista (0,083 bits, estab. 98%). Arestas que reaparecem na árvore do teste: 88%.</div>
+      <div><b>T1</b>: Taxa aprovação S1 (0,381), Mensalidade em dia (0,149), Bolsista (0,083). Sobreposição treino×teste: 84%.</div>
+      <div><b>T2</b>: Taxa aprovação S2 (0,474), Mensalidade em dia (0,149), Bolsista (0,083). Sobreposição: 82%. Kruskal próprio = networkx: sim.</div>
+    </div>
+  </div>
+  <p class="small sec"><b>Leitura educacional:</b> em todos os momentos, o desfecho se liga diretamente a <b>um fator acadêmico, à mensalidade e à bolsa</b>. Idade, modo de ingresso e estado civil não se ligam ao desfecho. Eles se ligam entre si (o adulto que entra pelo concurso de maiores de 23 é casado e estuda à noite) e chegam ao desfecho por meio da situação financeira e do desempenho. É a resposta, em forma de grafo, para "dependências entre fatores". Os blocos redundantes (inscritas ↔ avaliações ↔ aprovadas ↔ nota; S1 ↔ S2; os três macro entre si) explicam por que a ablação considera essas colunas dispensáveis.</p>
+
+  <h3 id="dag">G3 · DAG de trajetórias (ordenação topológica + caminho mínimo)</h3>
+  <p>Os estados são escolhidos no treino. <b>L0</b> = bolsa × faixa etária, o par de variáveis de ingresso de maior poder em CV. <b>L1</b> = mensalidade × devedor. <b>L2/L3</b> = faixa de aprovação no S1/S2. <b>L4</b> = desfecho. Cada aluno de treino percorre um caminho, e o arco acumula a contagem. O resultado é um DAG com 23 vértices e 76 arcos, validado pelo algoritmo de Kahn (também confere com o networkx).</p>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Fluxo dos 2.904 alunos de treino pelo DAG de trajetórias</div><div class="chart-sub">A largura é o nº de alunos. A cor é a taxa de evasão de quem passa por ali (azul abaixo da média, vermelho acima)</div></div></div>
+    <div id="legSankey"></div>
+    <div class="chart" id="chSankey"></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h4>Trajetória de maior risco</h4><p>Obtida com Bellman-Ford/DP em ordem topológica, peso −ln p, suporte ≥ 20 alunos.</p><p class="small"><b>Sem bolsa & Idade>23 → atrasada, sem divida → 0% → 0% → Dropout</b></p><p class="small sec">Treino: 57/57 evadiram. <b>Teste: 12/12</b>.</p></div>
+    <div class="card"><h4>Trajetória mais segura</h4><p class="small"><b>Bolsista & Idade<=20 → em dia, sem divida → 100% → 100% → Graduate</b></p><p class="small sec">Treino: 4,1% de evasão (n = 319). Teste: 0,0% (n = 56).</p></div>
+    <div class="card"><h4>Ponto de virada</h4><p class="small">O maior salto de risco está no arco <b>"mensalidade em dia, sem dívida → 0% de aprovação no S1"</b>: a taxa vai de 30% para 99% (teste: 100%). Dos 39 arcos testados, 26 são significativos (Holm), e 88% deles mantêm o sinal no teste.</p></div>
+  </div>
+  <p class="small sec">As taxas de evasão das 29 trajetórias completas com n ≥ 20 têm correlação ponderada de <b>0,986</b> entre treino e teste. Como preditor ("o risco do aluno é a taxa do caminho dele no treino"), o DAG chega a acurácia balanceada de 0,716 / 0,816 / 0,849 e AUC de 0,788 / 0,904 / 0,924 no teste, um pouco abaixo do corte mínimo, mas <b>totalmente explicável</b>.</p>
+
+  <h3 id="hipercubo">G4 · Grafo de perfis: regiões de risco e caminho mínimo de intervenção</h3>
+  <p>As 6 flags de risco são mensalidade atrasada, devedor, sem bolsa, idade ≥ 23, aprovação S1 &lt; 50% e aprovação S2 &lt; 50%. Elas formam até 2<sup>6</sup> = 64 perfis. Os que têm ≥ 10 alunos no treino viram vértices (26 perfis, cobrindo 2.804 alunos). Há aresta quando dois perfis diferem em <b>uma única flag</b>, o que faz deste grafo um subgrafo do <b>hipercubo Q<sub>6</sub></b> (aula de isomorfismo), com 46 arestas. Cada aresta compara dois grupos idênticos em tudo, exceto numa flag.</p>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Perfis por nº de flags (x) e taxa de evasão no treino (y)</div><div class="chart-sub">Tamanho = nº de alunos; linhas = Hamming 1; o traço escuro mostra o caminho de Dijkstra do maior perfil de alto risco até um perfil seguro</div></div></div>
+    <div id="legHC"></div>
+    <div class="chart" id="chHC"></div>
+  </div>
+  <div>
+    <div class="card"><h4>Efeito de cada flag "com todo o resto igual"</h4>
+      <p class="small sec">Média ponderada da diferença de taxa nas arestas do hipercubo que trocam só aquela flag.</p>
+      <div id="tabFlagEff"></div>
+      <p class="small sec">A aprovação no S1 parece "proteger" quando o S2 já está incluído. Isso é efeito de condicionamento: entre quem reprovou no S2, quem foi bem no S1 tende a ter saído por motivo não acadêmico. Mais um motivo para analisar <b>cada momento separadamente</b>.</p></div>
+    <div class="card"><h4>Caminhos mínimos de intervenção (Dijkstra)</h4>
+      <p class="small sec">Partindo de cada perfil com evasão ≥ 60%, buscamos o perfil com evasão ≤ 20% mais próximo. Trocar uma flag acionável (financeiro ou desempenho) custa 1. Idade é proibida (custo ∞). BFS indica 1 componente(s) de alto risco com 18 perfis.</p>
+      <div id="tabIv"></div>
+      <p class="small sec">Associação, não causa: o caminho sugere <b>onde</b> agir (apoio pedagógico no 1º ano, bolsa, renegociação), não garante o efeito.</p></div>
+  </div>
+
+  <h3 id="gemeos">Assortatividade e "gêmeos": perfis semelhantes, desfechos distintos</h3>
+  <div>
+    <div class="card"><h4>Assortatividade do desfecho no grafo kNN (k = 10, só treino)</h4>
+      <table class="t"><thead><tr><th>Momento</th><th class="num">r (Newman)</th><th class="num">% arestas com mesmo desfecho</th><th class="num">esperado ao acaso</th><th class="num">máx. em 200 permutações</th></tr></thead><tbody>
+      <tr><td>T0 ingresso</td><td class="num"><b>0,273</b></td><td class="num">66,2%</td><td class="num">53,5%</td><td class="num">0,026</td></tr>
+      <tr><td>T1 fim do S1</td><td class="num"><b>0,352</b></td><td class="num">70,1%</td><td class="num">53,8%</td><td class="num">0,020</td></tr>
+      <tr><td>T2 fim do S2</td><td class="num"><b>0,441</b></td><td class="num">74,2%</td><td class="num">53,9%</td><td class="num">0,021</td></tr>
+      </tbody></table>
+      <p class="small sec">O grafo é sempre conexo (1 componente). A assortatividade conferiu com <code>networkx.attribute_assortativity_coefficient</code>.</p></div>
+    <div class="card"><h4>Gêmeos: vizinhos mais próximos mútuos</h4>
+      <p class="small">No ingresso, <b>152 de 523</b> pares de gêmeos (29%) têm desfechos opostos. Em T2 são 20%. O que mais separa gêmeos discordantes de concordantes:</p>
+      <ul class="tight small">
+        <li><b>T0:</b> Curso (39% contra 27%); PIB (coorte) (34% contra 23%); Desemprego (coorte) (38% contra 30%); Nota formação prévia (48% contra 41%)</li>
+        <li><b>T1:</b> S1 aprovadas (31% contra 8%); S1 nota (30% contra 17%); S1 avaliações (22% contra 13%); Idade no ingresso (23% contra 16%)</li>
+      </ul>
+      <p class="small sec">Exemplo real (T0, distância de Gower 0,0076): dois alunos iguais em 21 de 24 variáveis. Diferem só em Idade no ingresso: 28 vs 29; Nota formação prévia: 130.0 vs 120.0; Nota de admissão: 146.2 vs 141.0. Um se formou e o outro evadiu. No ingresso, a informação disponível não separa esses casos. Depois do S1, o que separa os gêmeos passa a ser <b>aprovações e nota</b>. É a evidência relacional de que o 1º semestre é o momento de intervir.</p></div>
+  </div>
+</section>
+
+<section id="prova">
+  <h2>A prova 80/20: protocolo e resultado no teste</h2>
+  <div class="flow">
+    <div class="box"><span class="tag">passo 1</span><b>Split fixo</b>3.630 → 2.904 treino / 726 teste, estratificado, seed 42, salvo em arquivo</div><div class="arrow">→</div>
+    <div class="box"><span class="tag">passo 2 · só treino</span><b>Aprender</b>faixas, pesos (IM), k, λ, regra de 1 variável, estados do DAG, flags</div><div class="arrow">→</div>
+    <div class="box"><span class="tag">passo 3 · só treino</span><b>Selecionar</b>CV 5-fold estratificada: configuração e ablação</div><div class="arrow">→</div>
+    <div class="box"><span class="tag">passo 4 · teste, 1 vez</span><b>Provar</b>métricas, IC 95% (bootstrap 1.000), McNemar com correção de Holm</div><div class="arrow">→</div>
+    <div class="box"><span class="tag">passo 5</span><b>Robustez</b>mais 10 splits 80/20: média ± dp</div>
+  </div>
+  <div class="card">
+    <div class="chart-head"><div><div class="chart-title">Acurácia balanceada no teste (726 alunos) com IC 95%</div><div class="chart-sub">Azul = corte mínimo (nossa solução); cinza escuro = outros métodos de grafo; cinza claro = baselines; anel laranja = regressão logística (régua externa, não faz parte da solução). A linha em 0,5 é o acaso.</div></div></div>
+    <div id="legTest"></div>
+    <div class="chart" id="chTest"></div>
+    <div id="tabTest"></div>
+    <p class="small sec">Em T1 e T2, variantes como o voto dos vizinhos e o corte sem viés aparecem ligeiramente acima do corte mínimo escolhido. As diferenças ficam dentro dos ICs. A configuração foi escolhida <b>só pela CV no treino</b>, e trocá-la agora seria usar o teste para escolher, o que invalidaria a prova. Para o relatório vale a mensagem de conjunto: <b>todos os métodos de grafo ficam entre 0,74 e 0,76 no ingresso e entre 0,85 e 0,91 depois</b>, bem acima da regra isolada no ingresso.</p>
+  </div>
+  <div class="grid3">
+    <div class="card"><h4>Contra o acaso e a maioria</h4><p class="small">McNemar exato do corte mínimo contra a classe majoritária: p<sub>Holm</sub> &lt; 10<sup>−6</sup> nos três momentos. F1 da evasão no teste: 0,720 / 0,813 / 0,877.</p></div>
+    <div class="card"><h4>Contra a melhor variável isolada</h4><p class="small">p<sub>Holm</sub> = 0,0121 (T0, significativo), 0,41 (T1, empate estatístico), 0,0007 (T2, significativo). No ingresso, onde nenhuma variável sozinha resolve, o grafo ganha +10 p.p. É o principal argumento a favor da representação relacional.</p></div>
+    <div class="card"><h4>Robustez (10 splits)</h4><p class="small">Corte mínimo: 0,760 ± 0,015 (T0), 0,849 ± 0,010 (T1), 0,882 ± 0,010 (T2).</p></div>
+  </div>
+  <div class="callout"><b>Como formular a "prova" no relatório</b>"A hipótese H4 (o grafo aprendido em 80% identifica a evasão nos 20% restantes melhor que indicadores isolados) foi testada uma única vez no conjunto de teste, separado antes de qualquer decisão de modelagem." Em seguida, reportar acurácia balanceada, F1 e recall da evasão com IC 95%, o McNemar contra os baselines e a média de 10 splits. Não usar só a acurácia: com 61% de formados, "prever sempre forma" já dá acurácia de 0,61.</div>
+</section>
+
+<section id="louvain">
+  <h2>Por que não Louvain (e o que dizer se o professor perguntar)</h2>
+  <div class="grid2">
+    <div class="card"><h4>Argumentos técnicos</h4><ul class="tight">
+      <li>Louvain otimiza <b>modularidade</b>, que não usa o desfecho. No teste rápido do plano anterior, Q caía de T0 para T2 enquanto a assortatividade subia. Q alto não queria dizer grupos ligados à evasão.</li>
+      <li>Comunidades não são um classificador: transformar comunidade em previsão exige uma etapa extra que o corte mínimo já faz de forma direta e com teorema por trás (fluxo máximo = corte mínimo).</li>
+      <li>O próprio artigo do professor (Porto et al., 2025) mostra que, em limiares altos de similaridade, as "comunidades" viram <b>componentes conexas</b>, e Q engana (0,749 com 455 comunidades). Componentes por BFS, que usamos no G4, é a versão de aula disso.</li>
+      <li>Louvain é estocástico (depende de semente) e não está na ementa de SMAC03.</li>
+    </ul></div>
+    <div class="card"><h4>O que aproveitamos do artigo do professor</h4><ul class="tight">
+      <li>Pipeline atributos → matriz de similaridade → grafo (Fig. 1 do artigo). Nosso G1 é exatamente isso, com kNN no lugar do limiar w%.</li>
+      <li>A ideia de <b>grupos de atributos com peso</b> (Modelo 2 multirrelacional) virou nossa ablação por grupo e os pesos por informação mútua.</li>
+      <li>A recomendação final do artigo ("remover atributos que discriminam mal deixa os grupos mais coesos") é o que a ablação mede de forma quantitativa.</li>
+      <li>O que acrescentamos e o artigo não tinha: <b>validação 80/20 contra rótulo real</b>.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="crisp">
+  <h2>CRISP-NET fase a fase (versão dos slides XMCO09)</h2>
+  <p class="sec-lead">O CRISP-NET é a CRISP-DM com atividades de rede encaixadas em cada fase (Acuña-Cid et al., 2025). Os slides do professor acrescentam separação treino/teste sem vazamento, baselines, sementes, testes estatísticos e snapshots temporais. É essa versão que mede a aderência.</p>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Fase</th><th>Atividade de rede</th><th>O que fazemos</th><th>Entregável no repositório</th></tr></thead><tbody>
+  <tr><td>1. Entendimento do problema</td><td>Relações entre entidades</td><td>Pergunta, H1–H5, critérios de sucesso (bal. acc &gt; regra de 1 variável em T0/T1); definição dos 4 grafos</td><td><code>docs/fase1</code>: objetivos e hipóteses, nós e arestas</td></tr>
+  <tr><td>2. Entendimento dos dados</td><td>Relações entre atributos</td><td>Dicionário, AED por desfecho, informação mútua/lift (seção Fatores), árvore G2</td><td><code>docs/fase2</code>: dicionário, mapa atributo → momento</td></tr>
+  <tr><td>3. Preparação</td><td>Atributos de nós/arestas, matriz de conexões</td><td>Filtrar Enrolled, split 80/20, faixas no treino, Gower, kNN, estados do DAG, flags</td><td><code>split.csv</code>, listas de arestas</td></tr>
+  <tr><td>4. Modelagem</td><td>Nós-chave e representação</td><td>G1 corte mínimo; G2 Kruskal; G3 Kahn + Dijkstra; G4 BFS + Dijkstra; ablação por CV</td><td><code>src/</code> + tabelas de CV</td></tr>
+  <tr><td>5. Avaliação</td><td>Validar padrões relacionais</td><td>Teste 20% uma vez, IC 95%, McNemar e Holm, 10 splits, assortatividade com permutação</td><td><code>outputs/</code>: resultados de teste e figuras</td></tr>
+  <tr><td>6. Entrega</td><td>—</td><td>Relatório, slides, demonstração (lista de alunos em risco + explicação pelo caminho no DAG)</td><td>README com checklist</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="plano">
+  <h2>Plano até a entrega (22/11, 23h59)</h2>
+  <p class="sec-lead">Faltam 2 dias. O código das análises desta página já existe e roda (pasta <code>analise_v2/</code>, ao lado deste arquivo). O trabalho agora é portar, enxugar e escrever.</p>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Quando</th><th>O quê</th><th>Principal</th><th>Corresponsável</th></tr></thead><tbody>
+  <tr><td>20/11 (hoje, noite)</td><td>Grupo aprova este plano: os 4 grafos, a lista de parâmetros removidos e H1–H5. Congelar decisões.</td><td>Natan (Coord.)</td><td>Todos</td></tr>
+  <tr><td>20/11 → 21/11 manhã</td><td>Portar <code>analise_v2/</code> para o repositório (<code>src/dados.py</code>, <code>grafo_similaridade.py</code>, <code>corte_minimo.py</code>, <code>arvore_dependencias.py</code>, <code>dag_trajetorias.py</code>, <code>perfis.py</code>, <code>main.py</code>). Edmonds–Karp próprio comentado.</td><td>Carlos (Dev A)</td><td>Rafael (Dev B)</td></tr>
+  <tr><td>21/11 manhã</td><td>Reexecutar no repositório a avaliação final, que já foi rodada aqui (teste + 10 splits), gerar figuras finais e tabela de resultados.</td><td>Rafael (Dev B)</td><td>Carlos; modeladores interpretam</td></tr>
+  <tr><td>21/11</td><td>Seções 3.1 (dados, momentos, armadilhas, modelo formal dos 4 grafos) e 4 (resultados por hipótese).</td><td>Vinícius (Mod. A)</td><td>Gabriel (Mod. B)</td></tr>
+  <tr><td>21/11</td><td>Seções 1 e 2 (introdução, referencial: Tinto, Gower, Blum e Chawla, Chow e Liu, Cormen, CRISP-NET, Porto et al.).</td><td>Natan</td><td>Gabriel</td></tr>
+  <tr><td>21/11 noite</td><td>Slides (15 min) e vídeo curto da demonstração.</td><td>Natan</td><td>Todos</td></tr>
+  <tr><td>22/11</td><td>Revisão cruzada, conclusões, papéis dos membros, link do GitHub; envio no SIGAA até 23h59.</td><td>Natan</td><td>Todos</td></tr>
+  </tbody></table></div>
+  <details><summary>O que pode ser cortado se faltar tempo (ordem de prioridade)</summary>
+  <ol class="tight"><li><b>Nunca cortar:</b> filtro de Enrolled, split 80/20, seção de fatores com replicação, G1 corte mínimo com o teste, ablação por grupo.</li>
+  <li><b>Muito desejável:</b> G2 (árvore de Kruskal) e G3 (DAG), que dão a explicação e são baratos (os scripts já existem).</li>
+  <li><b>Opcional:</b> G4 (hipercubo + Dijkstra de intervenção), gêmeos, ablação variável a variável, 10 splits.</li></ol></details>
+</section>
+
+<section id="relatorio">
+  <h2>Relatório (≤ 9 páginas) e slides (~15 min)</h2>
+  <div class="grid2">
+    <div class="card"><h4>Mapa do relatório (template LaTeX)</h4>
+      <table class="t"><thead><tr><th>Seção</th><th>Limite</th><th>Conteúdo e figuras</th></tr></thead><tbody>
+      <tr><td>1. Introdução</td><td>1 pág.</td><td>Evasão como problema relacional; lacuna (indicadores isolados); pergunta; H1–H5; objetivos</td></tr>
+      <tr><td>2. Referencial</td><td>1 pág.</td><td>Tinto; Gower; kNN; fluxo máximo/corte mínimo (Cormen; Blum e Chawla); árvore máxima (Chow e Liu); DAG e caminho mínimo; CRISP-NET; Porto et al.</td></tr>
+      <tr><td>3.1 Modelagem</td><td>~1 pág.</td><td>Dataset, filtro, momentos, armadilhas; tabela dos 4 grafos; definição formal de G1</td></tr>
+      <tr><td>3.2 Método</td><td>~1 pág.</td><td>Diagrama do protocolo 80/20; Algoritmo 1 (Edmonds–Karp + corte); Algoritmo 2 (Kruskal máximo); ablação</td></tr>
+      <tr><td>4. Resultados</td><td>2 pág.</td><td>Fig. lift treino×teste; Fig. ablação por grupo; Fig. árvore G2; Fig. DAG; Tab. teste com IC; um parágrafo por hipótese</td></tr>
+      <tr><td>5. Conclusões</td><td>1,5 col.</td><td>Respostas, alerta no fim do S1, limitações, papéis, GitHub</td></tr>
+      </tbody></table></div>
+    <div class="card"><h4>Roteiro de slides (assertion-evidence)</h4>
+      <p class="small sec">Os materiais de design anexados (Alley) recomendam título em forma de <b>frase-afirmação</b> e o corpo como <b>evidência visual</b>, sem tópicos.</p>
+      <ol class="tight small">
+        <li>"Dois alunos quase iguais no ingresso podem ter desfechos opostos" (exemplo dos gêmeos) · Natan</li>
+        <li>"Tiramos os 794 ainda matriculados e separamos 20% para provar" (protocolo) · Gabriel</li>
+        <li>"Reprovar no 1º semestre é o maior sinal; no ingresso, o sinal é financeiro" (gráfico de lift) · Gabriel</li>
+        <li>"Metade dos parâmetros não muda nada" (ablação) · Vinícius</li>
+        <li>"Os fatores chegam à evasão por três portas: desempenho, mensalidade e bolsa" (árvore G2) · Vinícius</li>
+        <li>"O corte mínimo separa o mundo dos evadidos do mundo dos formados" (esquema G1 + código Edmonds–Karp) · Carlos</li>
+        <li>Demonstração: lista de risco + caminho do aluno no DAG · Carlos</li>
+        <li>"Nos 20% nunca vistos, o grafo acerta X; no ingresso, supera qualquer variável isolada" (gráfico do teste) · Rafael</li>
+        <li>"O momento de intervir é o fim do 1º semestre" (assortatividade + ponto de virada) · Rafael</li>
+        <li>Limitações e conclusões · Natan</li>
+      </ol></div>
+  </div>
+</section>
+
+<section id="limites">
+  <h2>Limitações e riscos</h2>
+  <div class="tablewrap"><table class="t"><thead><tr><th>Limitação / risco</th><th>Efeito</th><th>Como tratamos</th></tr></thead><tbody>
+  <tr><td>Associação ≠ causa</td><td>"Bolsa reduz evasão" pode refletir seleção de quem recebe bolsa</td><td>Linguagem associativa; estratificações; intervenções como hipóteses para a instituição testar</td></tr>
+  <tr><td>Vazamento temporal no S2 (e talvez na mensalidade)</td><td>Infla os resultados de T2</td><td>T1 é o resultado principal; T2 é o teto; momento de medição da mensalidade declarado como incerto</td></tr>
+  <tr><td>Uma instituição portuguesa, dados de 2008–2019</td><td>Generalização limitada para a UNIFEI</td><td>Discutir; proposta de replicação com dados do SIGAA</td></tr>
+  <tr><td>Só dois semestres de trajetória</td><td>Não captura evasão tardia</td><td>Declarar; DAG extensível a mais camadas</td></tr>
+  <tr><td>Remoção dos Enrolled</td><td>Viés de sobrevivência (matriculados de longa duração ficam de fora)</td><td>Declarar; analisar os Enrolled como trabalho futuro (aplicar o modelo e descrever)</td></tr>
+  <tr><td>Ética de alerta precoce</td><td>Rotular alunos pode estigmatizar; gênero e idade não são acionáveis</td><td>Usar o risco para <b>oferecer apoio</b>, nunca para restringir; no G4, idade e gênero não entram como intervenção</td></tr>
+  <tr><td>Teorema de corte mínimo fora dos slides</td><td>O professor pode questionar</td><td>Citar Cormen (cap. 26); mostrar que o corte sai do residual do Ford–Fulkerson visto em aula com uma BFS</td></tr>
+  </tbody></table></div>
+</section>
+
+<section id="refs">
+  <h2>Referências e reprodutibilidade</h2>
+  <div class="grid2">
+    <div class="card"><h4>Referências principais</h4><ul class="tight small">
+      <li>Realinho, V.; Machado, J.; Baptista, L.; Martins, M. V. (2022). Predicting Student Dropout and Academic Success. <i>Data</i>, 7(11), 146. UCI ML Repository #697.</li>
+      <li>Blum, A.; Chawla, S. (2001). Learning from labeled and unlabeled data using graph mincuts. <i>ICML</i>.</li>
+      <li>Chow, C.; Liu, C. (1968). Approximating discrete probability distributions with dependence trees. <i>IEEE Trans. Inf. Theory</i>, 14(3).</li>
+      <li>Cormen, T. et al. <i>Introduction to Algorithms</i>: cap. 22 (busca, ordenação topológica), 23 (Kruskal/Prim), 24 (Dijkstra/Bellman-Ford), 26 (fluxo máximo).</li>
+      <li>Gower, J. C. (1971). A general coefficient of similarity and some of its properties. <i>Biometrics</i>, 27(4).</li>
+      <li>Newman, M. E. J. (2003). Mixing patterns in networks. <i>Phys. Rev. E</i>, 67.</li>
+      <li>Zhu, X.; Ghahramani, Z.; Lafferty, J. (2003). Semi-supervised learning using Gaussian fields and harmonic functions. <i>ICML</i> (comparador).</li>
+      <li>Tinto, V. (1975). Dropout from higher education: a theoretical synthesis. <i>Review of Educational Research</i>, 45(1).</li>
+      <li>Acuña-Cid et al. (2025). CRISP-NET. <i>Mach. Learn. Knowl. Extr.</i>, 7(3), 101. Slides XMCO09 1.2 (Frinhani, 2026).</li>
+      <li>Porto, R. A.; Frinhani, R. M. D.; Mendes, F. R. M.; Souza, V. C. O. (2025). Network models development and community detection in identifying similar socioeconomic profiles. <i>KDMiLe</i>.</li>
+    </ul>
+    <p class="small muted">A pesquisa web automática não terminou nesta rodada (limite de uso). As referências acima são clássicas e foram conferidas pelo título no material, mas DOIs e páginas devem ser checados antes de ir para o <code>.bib</code>.</p></div>
+    <div class="card"><h4>Como reproduzir</h4>
+      <pre>analise_v2/
+├── common.py            # filtro Enrolled, split 80/20 (seed 42), CV, métricas
+├── split.csv            # quem é treino e quem é teste
+├── a1_fatores/          # lift, IM, replicação, regras de 1 variável, perfis
+├── a2_mincut/           # grafo kNN Gower + corte mínimo, CV, ablação, teste
+├── a3_trajetorias/      # DAG (Kahn, Bellman-Ford), preditor por caminho
+└── extra/               # Chow-Liu (Kruskal), interações, hipercubo, assortatividade</pre>
+      <p class="small sec">Python 3.12, pandas, numpy, networkx 3.x, scipy, scikit-learn. A regressão logística serve só como régua. Todo o resto é contagem, informação mútua e algoritmos de grafo.</p>
+      <p class="small muted">Gerado em 20/11/2026. Os números vêm dos scripts acima, executados sobre <code>data.csv</code> (UCI 697). O plano anterior (grafo temporal + Louvain) não pôde ser relido porque o HTML salvo só contém a casca do artifact.</p></div>
+  </div>
+</section>
+</main></div>
+
+<script>const DATA = {"lift": [{"label": "S1: inscrito e 0% aprovado", "group": "acadêmico S1", "lift_train": 2.5408902797379205, "lift_test": 2.556338028169014, "rate_train": 0.9948320413436692, "rate_test": 1.0, "n_train": 387, "n_test": 108, "q": 6.011478263462174e-172, "dir": "aumenta"}, {"label": "S1: aprovou < 50%", "group": "acadêmico S1", "lift_train": 2.4963701682989727, "lift_test": 2.463380281690141, "rate_train": 0.9774011299435028, "rate_test": 0.9636363636363636, "n_train": 177, "n_test": 55, "q": 5.444750902815553e-67, "dir": "aumenta"}, {"label": "S2: aprovou < 50%", "group": "acadêmico S2", "lift_train": 2.4430423310772054, "lift_test": 2.556338028169014, "rate_train": 0.9565217391304348, "rate_test": 1.0, "n_train": 184, "n_test": 50, "q": 2.8419261326238825e-63, "dir": "aumenta"}, {"label": "Mensalidade atrasada", "group": "financeiro", "lift_train": 2.400710954345984, "lift_test": 2.407425133324217, "rate_train": 0.9399477806788512, "rate_test": 0.941747572815534, "n_train": 383, "n_test": 103, "q": 1.0147713600907377e-130, "dir": "aumenta"}, {"label": "Curso: Eng. Informática", "group": "ingresso", "lift_train": 2.2463680579839145, "lift_test": 2.1117575015309247, "rate_train": 0.8795180722891566, "rate_test": 0.8260869565217391, "n_train": 83, "n_test": 23, "q": 4.984507104302201e-20, "dir": "aumenta"}, {"label": "Devedor", "group": "financeiro", "lift_train": 1.9407976517952379, "lift_test": 1.88682092555332, "rate_train": 0.7598784194528876, "rate_test": 0.7380952380952381, "n_train": 329, "n_test": 84, "q": 2.530636635772968e-46, "dir": "aumenta"}, {"label": "Escolaridade da mãe desconhecida", "group": "família", "lift_train": 1.909368035453544, "lift_test": 2.0237676056338025, "rate_train": 0.7475728155339806, "rate_test": 0.7916666666666666, "n_train": 103, "n_test": 24, "q": 4.707051354578395e-13, "dir": "aumenta"}, {"label": "Formação prévia: básico 3º ciclo", "group": "ingresso", "lift_train": 1.7599609764750228, "lift_test": 1.8746478873239434, "rate_train": 0.6890756302521008, "rate_test": 0.7333333333333333, "n_train": 119, "n_test": 30, "q": 1.3022800733668295e-10, "dir": "aumenta"}, {"label": "Ingresso 'maiores de 23 anos'", "group": "ingresso", "lift_train": 1.6568351462957696, "lift_test": 1.744802146210597, "rate_train": 0.6486988847583643, "rate_test": 0.6825396825396826, "n_train": 538, "n_test": 126, "q": 4.560444065915677e-40, "dir": "aumenta"}, {"label": "Idade no ingresso 28+", "group": "demográfico", "lift_train": 1.6249441176728407, "lift_test": 1.6236200989722114, "rate_train": 0.6362126245847176, "rate_test": 0.6351351351351351, "n_train": 602, "n_test": 148, "q": 1.1210280249884229e-41, "dir": "aumenta"}, {"label": "Curso: Gestão (noturno)", "group": "ingresso", "lift_train": 1.6131092903763364, "lift_test": 1.6645922043891255, "rate_train": 0.631578947368421, "rate_test": 0.6511627906976745, "n_train": 171, "n_test": 43, "q": 2.948706550013919e-10, "dir": "aumenta"}, {"label": "Idade no ingresso 23–27", "group": "demográfico", "lift_train": 1.5309380456143373, "lift_test": 1.6927103159497525, "rate_train": 0.599406528189911, "rate_test": 0.6621621621621622, "n_train": 337, "n_test": 74, "q": 1.2622232959300075e-15, "dir": "aumenta"}, {"label": "Gênero masculino", "group": "demográfico", "lift_train": 1.4537846735068736, "lift_test": 1.3669307511737088, "rate_train": 0.5691987513007284, "rate_test": 0.5347222222222222, "n_train": 961, "n_test": 288, "q": 6.380119684916809e-42, "dir": "aumenta"}, {"label": "Casado(a)", "group": "demográfico", "lift_train": 1.3254177660510114, "lift_test": 1.704225352112676, "rate_train": 0.5189393939393939, "rate_test": 0.6666666666666666, "n_train": 264, "n_test": 63, "q": 3.0253363837455217e-05, "dir": "aumenta"}, {"label": "Nota de admissão no 1º quartil", "group": "ingresso", "lift_train": 1.2964207078518788, "lift_test": 1.0936205468102733, "rate_train": 0.5075862068965518, "rate_test": 0.42780748663101603, "n_train": 725, "n_test": 187, "q": 1.0223579383320459e-12, "dir": "aumenta"}, {"label": "Turno noturno", "group": "ingresso", "lift_train": 1.2924309374701972, "lift_test": 1.3118050407709414, "rate_train": 0.5060240963855421, "rate_test": 0.5131578947368421, "n_train": 332, "n_test": 76, "q": 1.8660435027873e-05, "dir": "aumenta"}, {"label": "Necessidades educativas especiais", "group": "demográfico", "lift_train": 1.0710698782875139, "lift_test": 1.136150234741784, "rate_train": 0.41935483870967744, "rate_test": 0.4444444444444444, "n_train": 31, "n_test": 9, "q": 0.8848527445949208, "dir": "sem efeito"}, {"label": "Internacional", "group": "demográfico", "lift_train": 0.9014434269750117, "lift_test": 1.136150234741784, "rate_train": 0.35294117647058826, "rate_test": 0.4444444444444444, "n_train": 68, "n_test": 18, "q": 0.6167682764567304, "dir": "sem efeito"}, {"label": "Deslocado (mudou de cidade)", "group": "demográfico", "lift_train": 0.8770647682580773, "lift_test": 0.780222276587565, "rate_train": 0.3433962264150943, "rate_test": 0.3052109181141439, "n_train": 1590, "n_test": 403, "q": 2.0737827147653593e-08, "dir": "diminui"}, {"label": "Coorte (desemprego 12,4%) — macro", "group": "macro", "lift_train": 0.755041118579435, "lift_test": 0.8205529473135106, "rate_train": 0.2956204379562044, "rate_test": 0.32098765432098764, "n_train": 274, "n_test": 81, "q": 0.0012306277900531553, "dir": "diminui"}, {"label": "Idade no ingresso 17–19", "group": "demográfico", "lift_train": 0.6468531114517543, "lift_test": 0.6350651076268934, "rate_train": 0.25326170376055257, "rate_test": 0.24842767295597484, "n_train": 1303, "n_test": 318, "q": 4.887670557408444e-43, "dir": "diminui"}, {"label": "Ingresso 1ª fase geral", "group": "ingresso", "lift_train": 0.6362819978706661, "lift_test": 0.5818530586504099, "rate_train": 0.24912280701754386, "rate_test": 0.22761194029850745, "n_train": 1140, "n_test": 268, "q": 7.936861554112801e-37, "dir": "diminui"}, {"label": "Curso: Enfermagem", "group": "ingresso", "lift_train": 0.4583039479200059, "lift_test": 0.4293086764863993, "rate_train": 0.17943925233644858, "rate_test": 0.16793893129770993, "n_train": 535, "n_test": 131, "q": 2.165708850192844e-30, "dir": "diminui"}, {"label": "Bolsista", "group": "financeiro", "lift_train": 0.346970677552646, "lift_test": 0.3819815444390481, "rate_train": 0.13584905660377358, "rate_test": 0.14942528735632185, "n_train": 795, "n_test": 174, "q": 3.453881326599277e-73, "dir": "diminui"}, {"label": "S1: média ≥ 14 (escala 0–20)", "group": "acadêmico S1", "lift_train": 0.33875295097903074, "lift_test": 0.34236670020120724, "rate_train": 0.13263157894736843, "rate_test": 0.13392857142857142, "n_train": 475, "n_test": 112, "q": 2.3576100490164627e-40, "dir": "diminui"}, {"label": "S1: aprovou 100%", "group": "acadêmico S1", "lift_train": 0.26185462324063824, "lift_test": 0.19310467119262337, "rate_train": 0.10252365930599369, "rate_test": 0.07553956834532374, "n_train": 1268, "n_test": 278, "q": 3.13508916530097e-189, "dir": "diminui"}, {"label": "S2: aprovou 100%", "group": "acadêmico S2", "lift_train": 0.18167165299566135, "lift_test": 0.0852112676056338, "rate_train": 0.07112970711297072, "rate_test": 0.03333333333333333, "n_train": 1195, "n_test": 270, "q": 2.4919799053292642e-216, "dir": "diminui"}], "abl": {"T0_ingresso": {"lofo": [{"label": "Mensalidade em dia", "mean": -0.03265632789465149, "sd": 0.014416897458723916, "cls": "essencial", "p": 0.007155361319278817}, {"label": "Curso", "mean": -0.024231760241341105, "sd": 0.011175858734029674, "cls": "essencial", "p": 0.008349724176696004}, {"label": "Bolsista", "mean": -0.0166547784247719, "sd": 0.014100710925140569, "cls": "neutra", "p": 0.05751490619749025}, {"label": "Gênero", "mean": -0.013960527793632682, "sd": 0.008156812742184142, "cls": "essencial", "p": 0.018664874593826358}, {"label": "Modo de ingresso", "mean": -0.013800084305155802, "sd": 0.018453542335002814, "cls": "neutra", "p": 0.16980303539302602}, {"label": "Escolaridade pai", "mean": -0.00780296148123163, "sd": 0.003997441161327847, "cls": "essencial", "p": 0.012017061726435511}, {"label": "Ocupação mãe", "mean": -0.007004397549236163, "sd": 0.006791437616092137, "cls": "neutra", "p": 0.08237692278740134}, {"label": "Escolaridade mãe", "mean": -0.005804032916616464, "sd": 0.006077190665599582, "cls": "neutra", "p": 0.09958328782593864}, {"label": "Idade no ingresso", "mean": -0.005428439765744431, "sd": 0.005804789054531696, "cls": "neutra", "p": 0.10470117319203046}, {"label": "Ocupação pai", "mean": -0.005401126013720203, "sd": 0.009204167486876115, "cls": "neutra", "p": 0.2597007128198214}, {"label": "Estado civil", "mean": -0.003619405423292266, "sd": 0.004226330959719903, "cls": "neutra", "p": 0.1280129409020573}, {"label": "Formação prévia", "mean": -0.0028558629423623303, "sd": 0.0032866189947967587, "cls": "neutra", "p": 0.123949314124748}, {"label": "Nota de admissão", "mean": -0.0023368630611352746, "sd": 0.007592383966668621, "cls": "neutra", "p": 0.5291372103121679}, {"label": "Devedor", "mean": -0.0013870060226572444, "sd": 0.006012409087779981, "cls": "neutra", "p": 0.6331687052783458}, {"label": "Deslocado", "mean": -0.000602414805791196, "sd": 0.005777136385940001, "cls": "neutra", "p": 0.8270772366063415}, {"label": "Nacionalidade", "mean": -0.0003114209877697727, "sd": 0.0018580429008345108, "cls": "neutra", "p": 0.7268475414010078}, {"label": "Necess. especiais", "mean": -0.0002824858757062065, "sd": 0.0006316576207626342, "cls": "neutra", "p": 0.37390096630005876}, {"label": "Internacional", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Inflação (coorte)", "mean": 0.00012171073064408678, "sd": 0.00405654520258433, "cls": "neutra", "p": 0.949729655886862}, {"label": "Turno", "mean": 0.0001252433603251335, "sd": 0.0023966863935022506, "cls": "neutra", "p": 0.9126109432299674}, {"label": "PIB (coorte)", "mean": 0.00015771110206974637, "sd": 0.0025576264579577042, "cls": "neutra", "p": 0.8969954433659117}, {"label": "Desemprego (coorte)", "mean": 0.0004096613791645165, "sd": 0.0064542175280899285, "cls": "neutra", "p": 0.8939987601018283}, {"label": "Nota formação prévia", "mean": 0.0013098561141812626, "sd": 0.0018966315575459818, "cls": "neutra", "p": 0.19740290890527093}, {"label": "Ordem de opção", "mean": 0.0018876895543553207, "sd": 0.005922811782274567, "cls": "neutra", "p": 0.5154178971770282}], "logo": [{"label": "demografico", "n": 7, "mean": -0.011608850027111272, "sd": 0.009781935782554492, "lo": -0.023754727521050345, "hi": 0.0005370274668278028, "cls": "neutra", "p": 0.05676301187456404, "p_holm": 0.13634293875797185, "bal_sem": 0.7482638711039011}, {"label": "familia", "n": 4, "mean": -0.00706064641332389, "sd": 0.005500197929388655, "lo": -0.013890044165240673, "hi": -0.00023124866140710864, "cls": "essencial", "p": 0.045447646252657285, "p_holm": 0.13634293875797185, "bal_sem": 0.7528120747176885}, {"label": "ingresso", "n": 7, "mean": -0.025349921446836298, "sd": 0.016757668570739244, "lo": -0.04615731520495395, "hi": -0.004542527688718653, "cls": "essencial", "p": 0.027719291107331095, "p_holm": 0.11087716442932438, "bal_sem": 0.7345227996841761}, {"label": "macro", "n": 3, "mean": 0.0018842938547777078, "sd": 0.0035593618411830733, "lo": -0.0025352375999995783, "hi": 0.0063038253095549935, "cls": "neutra", "p": 0.3020510185634487, "p_holm": 0.3020510185634487, "bal_sem": 0.7617570149857901}, {"label": "financeiro", "n": 3, "mean": -0.07475912111550405, "sd": 0.014752312259217802, "lo": -0.09307653613803482, "hi": -0.05644170609297327, "cls": "essencial", "p": 0.0003457613112385135, "p_holm": 0.0017288065561925675, "bal_sem": 0.6851136000155085}]}, "T1_fim_s1": {"lofo": [{"label": "S1 aprovadas", "mean": -0.034445755720265245, "sd": 0.01624163093961838, "cls": "essencial", "p": 0.009021748000531809}, {"label": "Mensalidade em dia", "mean": -0.017769286119878158, "sd": 0.008535357998227876, "cls": "essencial", "p": 0.009624382541362294}, {"label": "S1 nota", "mean": -0.009059417174344242, "sd": 0.008671946931588168, "cls": "neutra", "p": 0.07972852268263925}, {"label": "Escolaridade mãe", "mean": -0.0031470145639785007, "sd": 0.008024335897284735, "cls": "neutra", "p": 0.4300257456787982}, {"label": "Devedor", "mean": -0.0031061918594177174, "sd": 0.004134001874360614, "cls": "neutra", "p": 0.16822943621967018}, {"label": "Desemprego (coorte)", "mean": -0.00301857023055756, "sd": 0.003263519157057819, "cls": "neutra", "p": 0.10744466050752971}, {"label": "Ocupação pai", "mean": -0.0028600588852138566, "sd": 0.00478081740033448, "cls": "neutra", "p": 0.2519862662653559}, {"label": "S1 avaliações", "mean": -0.002801525347916267, "sd": 0.0037086496711663335, "cls": "neutra", "p": 0.1664621216317829}, {"label": "Formação prévia", "mean": -0.002456662522137476, "sd": 0.005960547488467946, "cls": "neutra", "p": 0.4088902332011139}, {"label": "Deslocado", "mean": -0.0022963559637640294, "sd": 0.0019341621591624908, "cls": "neutra", "p": 0.05669719028702923}, {"label": "Nota de admissão", "mean": -0.0022622877354715465, "sd": 0.002439229399807576, "cls": "neutra", "p": 0.10676194361987891}, {"label": "Inflação (coorte)", "mean": -0.0019844663893055837, "sd": 0.0034956296190434078, "cls": "neutra", "p": 0.2731240219430169}, {"label": "Gênero", "mean": -0.001980270446454013, "sd": 0.007638126641176648, "cls": "neutra", "p": 0.5931847643107273}, {"label": "PIB (coorte)", "mean": -0.001948934604568664, "sd": 0.002603858759660687, "cls": "neutra", "p": 0.16951319311345847}, {"label": "Escolaridade pai", "mean": -0.0018061542644971062, "sd": 0.005720939656105185, "cls": "neutra", "p": 0.5191664407235934}, {"label": "Ocupação mãe", "mean": -0.0015770688098594831, "sd": 0.006665141001529899, "cls": "neutra", "p": 0.6247454749188669}, {"label": "Estado civil", "mean": -0.0011347449624685257, "sd": 0.0035836567510067665, "cls": "neutra", "p": 0.5179981682654672}, {"label": "Nota formação prévia", "mean": -0.0006313499178546955, "sd": 0.005570873702633433, "cls": "neutra", "p": 0.8124396473689427}, {"label": "S1 creditadas", "mean": -0.0005665722379603278, "sd": 0.0012668940382434797, "cls": "neutra", "p": 0.37390096630005887}, {"label": "Nacionalidade", "mean": -0.000564971751412413, "sd": 0.0012633152415252684, "cls": "neutra", "p": 0.37390096630005876}, {"label": "Idade no ingresso", "mean": -0.0005646400948271513, "sd": 0.0026518612856597148, "cls": "neutra", "p": 0.6588357879886623}, {"label": "Modo de ingresso", "mean": -0.0005070437309069531, "sd": 0.006814667975901067, "cls": "neutra", "p": 0.8759338119757559}, {"label": "Bolsista", "mean": -0.00031542220413949273, "sd": 0.00567480264224222, "cls": "neutra", "p": 0.9070833525635815}, {"label": "Turno", "mean": -0.0002805537325730301, "sd": 0.003373985773759104, "cls": "neutra", "p": 0.8615451614424022}, {"label": "S1 sem avaliação", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Necess. especiais", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Internacional", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Ordem de opção", "mean": 0.0004381279045393871, "sd": 0.0020423572177588668, "cls": "neutra", "p": 0.6565024496093416}, {"label": "S1 inscritas", "mean": 0.0005942385200612855, "sd": 0.0011924034395021264, "cls": "neutra", "p": 0.3275660489100141}, {"label": "Curso", "mean": 0.004792425318349514, "sd": 0.008355957702549705, "cls": "neutra", "p": 0.2689569924764737}], "logo": [{"label": "demografico", "n": 7, "mean": -0.004738087723903361, "sd": 0.008095594497298476, "lo": -0.014790095955255378, "hi": 0.005313920507448656, "cls": "neutra", "p": 0.26076204810366416, "p_holm": 0.7822861443109925, "bal_sem": 0.8385296745327668}, {"label": "familia", "n": 4, "mean": -0.0016754252578663254, "sd": 0.006172455416754048, "lo": -0.009339540929367639, "hi": 0.005988690413634987, "cls": "neutra", "p": 0.5766496787348445, "p_holm": 1.0, "bal_sem": 0.8415923369988038}, {"label": "ingresso", "n": 7, "mean": 0.009637108396463834, "sd": 0.011366632897618642, "lo": -0.004476430453307766, "hi": 0.023750647246235435, "cls": "neutra", "p": 0.13086659194274158, "p_holm": 0.5234663677709663, "bal_sem": 0.8529048706531339}, {"label": "macro", "n": 3, "mean": -0.0008154584720626801, "sd": 0.003133623963023836, "lo": -0.004706366530857981, "hi": 0.0030754495867326205, "cls": "neutra", "p": 0.5918598250873476, "p_holm": 1.0, "bal_sem": 0.8424523037846076}, {"label": "financeiro", "n": 3, "mean": -0.03190791043834611, "sd": 0.019267451697698668, "lo": -0.055831611548508533, "hi": -0.007984209328183677, "cls": "essencial", "p": 0.020779978840624908, "p_holm": 0.10389989420312454, "bal_sem": 0.811359851818324}, {"label": "academico_s1", "n": 6, "mean": -0.08339504112565772, "sd": 0.010554445603187365, "lo": -0.09650011625213549, "hi": -0.07028996599917996, "cls": "essencial", "p": 6.0280038656977e-05, "p_holm": 0.000361680231941862, "bal_sem": 0.7598727211310125}]}, "T2_fim_s2": {"lofo": [{"label": "S2 aprovadas", "mean": -0.01113359996333394, "sd": 0.007443741341152285, "cls": "essencial", "p": 0.02871567521709521}, {"label": "Mensalidade em dia", "mean": -0.011095646575283679, "sd": 0.00926923188135273, "cls": "neutra", "p": 0.0554204332677265}, {"label": "Devedor", "mean": -0.0033010561062638112, "sd": 0.0037820064381782915, "cls": "neutra", "p": 0.12271587774048824}, {"label": "Curso", "mean": -0.002984502002265077, "sd": 0.00648767275046211, "cls": "neutra", "p": 0.36177600304638025}, {"label": "Nota de admissão", "mean": -0.002296355963764074, "sd": 0.003075705389266925, "cls": "neutra", "p": 0.17034647774567613}, {"label": "Ocupação mãe", "mean": -0.0015728728670079128, "sd": 0.0051884855917647766, "cls": "neutra", "p": 0.5350476463891978}, {"label": "Nota formação prévia", "mean": -0.001569808824015606, "sd": 0.0038437791290213577, "cls": "neutra", "p": 0.412793306902688}, {"label": "Bolsista", "mean": -0.001534766499458673, "sd": 0.007108630513166672, "cls": "neutra", "p": 0.6544902042728767}, {"label": "Gênero", "mean": -0.001477364862020325, "sd": 0.004602905126804336, "cls": "neutra", "p": 0.5126267415770963}, {"label": "Deslocado", "mean": -0.0014148301083529268, "sd": 0.002440965125032057, "cls": "neutra", "p": 0.26467632993488216}, {"label": "Desemprego (coorte)", "mean": -0.0010051687291884105, "sd": 0.0017155441703442698, "cls": "neutra", "p": 0.26031460887109903}, {"label": "Inflação (coorte)", "mean": -0.0008799253688632324, "sd": 0.002000194552463778, "cls": "neutra", "p": 0.38096014316491084}, {"label": "Turno", "mean": -0.0008498583569405138, "sd": 0.0016132262329896319, "cls": "neutra", "p": 0.30410295488245187}, {"label": "S2 avaliações", "mean": -0.0008490581136665787, "sd": 0.0062956662787240995, "cls": "neutra", "p": 0.7780116123547516}, {"label": "S1 aprovadas", "mean": -0.0006567524002371927, "sd": 0.006815281668456221, "cls": "neutra", "p": 0.8399359593990059}, {"label": "Estado civil", "mean": -0.00041046162243847385, "sd": 0.0006249015573783349, "cls": "neutra", "p": 0.2158271855826583}, {"label": "S1 inscritas", "mean": -0.0002813539758469652, "sd": 0.0015032499769587512, "cls": "neutra", "p": 0.6970673271279769}, {"label": "S2 nota", "mean": -0.00025208720719820387, "sd": 0.004093562765318736, "cls": "neutra", "p": 0.8971308461411576}, {"label": "Nacionalidade", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Internacional", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "S2 sem avaliação", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "S1 sem avaliação", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Ordem de opção", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "Necess. especiais", "mean": 0.0, "sd": 0.0, "cls": "neutra", "p": 1.0}, {"label": "S1 avaliações", "mean": 0.00015531037224789657, "sd": 0.0038446436085914516, "cls": "neutra", "p": 0.9323678266683949}, {"label": "Idade no ingresso", "mean": 0.00015724251538109523, "sd": 0.003661579447545755, "cls": "neutra", "p": 0.9281189000791359}, {"label": "S2 creditadas", "mean": 0.00028248587570622874, "sd": 0.0006316576207626839, "cls": "neutra", "p": 0.37390096630005887}, {"label": "S1 creditadas", "mean": 0.00028248587570622874, "sd": 0.0006316576207626839, "cls": "neutra", "p": 0.37390096630005887}, {"label": "S2 inscritas", "mean": 0.0002852182621133403, "sd": 0.0011233791045640094, "cls": "neutra", "p": 0.6005724479187396}, {"label": "Ocupação pai", "mean": 0.0003437517994109296, "sd": 0.0051645159772923865, "cls": "neutra", "p": 0.8888871191585321}, {"label": "PIB (coorte)", "mean": 0.0005657719946863926, "sd": 0.0007747165013170729, "cls": "neutra", "p": 0.17780837773767902}, {"label": "Formação prévia", "mean": 0.0005958390066091556, "sd": 0.001863573078641467, "cls": "neutra", "p": 0.5141574753164143}, {"label": "Escolaridade mãe", "mean": 0.0007495488923091375, "sd": 0.005955854867687703, "cls": "neutra", "p": 0.7923530793498567}, {"label": "S1 nota", "mean": 0.0012614518792382068, "sd": 0.0034875386803848167, "cls": "neutra", "p": 0.4639946393292221}, {"label": "Escolaridade pai", "mean": 0.001503430657573257, "sd": 0.005121277768996934, "cls": "neutra", "p": 0.5473905494378708}, {"label": "Modo de ingresso", "mean": 0.0049671940520323865, "sd": 0.00388690253403204, "cls": "prejudicial", "p": 0.04604364224929365}], "logo": [{"label": "demografico", "n": 7, "mean": -0.0025812425692922194, "sd": 0.006390034958930571, "lo": -0.01051551892505978, "hi": 0.005353033786475341, "cls": "neutra", "p": 0.41746808406120983, "p_holm": 1.0, "bal_sem": 0.8755285530752195}, {"label": "familia", "n": 4, "mean": -0.0013535641846482704, "sd": 0.0038663525544668453, "lo": -0.0061542749558929095, "hi": 0.0034471465865963686, "cls": "neutra", "p": 0.47748325938352654, "p_holm": 1.0, "bal_sem": 0.8767562314598635}, {"label": "ingresso", "n": 7, "mean": 0.0012240088248594682, "sd": 0.007883121566058202, "lo": -0.008564179417178677, "hi": 0.011012197066897612, "cls": "neutra", "p": 0.745943922283815, "p_holm": 1.0, "bal_sem": 0.8793338044693713}, {"label": "macro", "n": 3, "mean": -0.0008514588434884063, "sd": 0.00257021147566013, "lo": -0.0040427979005857595, "hi": 0.0023398802136089473, "cls": "neutra", "p": 0.49996366540344883, "p_holm": 1.0, "bal_sem": 0.8772583368010233}, {"label": "financeiro", "n": 3, "mean": -0.01696383560560675, "sd": 0.013098073284863204, "lo": -0.033227241649255904, "hi": -0.0007004295619575905, "cls": "essencial", "p": 0.04429439635496911, "p_holm": 0.26576637812981463, "bal_sem": 0.8611459600389051}, {"label": "academico_s1", "n": 6, "mean": -0.0056556139507402126, "sd": 0.006705718174842168, "lo": -0.013981862790542386, "hi": 0.002670634889061961, "cls": "neutra", "p": 0.13237527882433653, "p_holm": 0.6618763941216826, "bal_sem": 0.8724541816937714}, {"label": "academico_s2", "n": 6, "mean": -0.03711154418627009, "sd": 0.011725888289052489, "lo": -0.0516711575217457, "hi": -0.022551930850794488, "cls": "essencial", "p": 0.0021040312763053316, "p_holm": 0.01472821893413732, "bal_sem": 0.8409982514582417}]}}, "test": [{"title": "T0 · ingresso", "rows": [{"label": "Classe majoritária (sempre 'forma')", "v": 0.5, "lo": 0.5, "hi": 0.5, "kind": "base", "extra": [{"l": "F1 evasão", "v": "0,000"}, {"l": "recall evasão", "v": "0,000"}, {"l": "precisão evasão", "v": "0,000"}, {"l": "AUC", "v": "–"}]}, {"label": "Regra de 1 variável (do treino)", "v": 0.664, "lo": 0.628950125361039, "hi": 0.6982841307573133, "kind": "base", "extra": [{"l": "F1 evasão", "v": "0,575"}, {"l": "recall evasão", "v": "0,532"}, {"l": "precisão evasão", "v": "0,627"}, {"l": "AUC", "v": "–"}]}, {"label": "Caminho no DAG de trajetórias", "v": 0.7156, "lo": 0.6828, "hi": 0.7486, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,660"}, {"l": "AUC", "v": "0,788"}]}, {"label": "Corte mínimo sem viés (λ = 0)", "v": 0.7361, "lo": 0.7016206159847412, "hi": 0.766044138912426, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,668"}, {"l": "recall evasão", "v": "0,606"}, {"l": "precisão evasão", "v": "0,745"}, {"l": "AUC", "v": "–"}]}, {"label": "Corte mínimo só com variáveis essenciais (8 var.)", "v": 0.7401, "lo": 0.7073825890495011, "hi": 0.7717200894060011, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,696"}, {"l": "recall evasão", "v": "0,799"}, {"l": "precisão evasão", "v": "0,617"}, {"l": "AUC", "v": "0,842"}]}, {"label": "Função harmônica (grafo kNN)", "v": 0.7605, "lo": 0.7294496825361196, "hi": 0.7902288666927144, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,714"}, {"l": "recall evasão", "v": "0,768"}, {"l": "precisão evasão", "v": "0,667"}, {"l": "AUC", "v": "0,848"}]}, {"label": "Voto ponderado dos vizinhos (grafo kNN)", "v": 0.7614, "lo": 0.7280736789665362, "hi": 0.7909354756231055, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,713"}, {"l": "recall evasão", "v": "0,753"}, {"l": "precisão evasão", "v": "0,677"}, {"l": "AUC", "v": "0,844"}]}, {"label": "Corte mínimo / fluxo máximo (Edmonds–Karp)", "v": 0.7632, "lo": 0.7320923876603226, "hi": 0.7933966172853367, "kind": "ours", "extra": [{"l": "F1 evasão", "v": "0,720"}, {"l": "recall evasão", "v": "0,820"}, {"l": "precisão evasão", "v": "0,642"}, {"l": "AUC", "v": "0,852"}]}, {"label": "Regressão logística (referência externa)", "v": 0.7678, "lo": 0.7378865844560781, "hi": 0.798524343447114, "kind": "ref", "extra": [{"l": "F1 evasão", "v": "0,721"}, {"l": "recall evasão", "v": "0,764"}, {"l": "precisão evasão", "v": "0,682"}, {"l": "AUC", "v": "0,856"}]}]}, {"title": "T1 · fim do 1º semestre", "rows": [{"label": "Classe majoritária (sempre 'forma')", "v": 0.5, "lo": 0.5, "hi": 0.5, "kind": "base", "extra": [{"l": "F1 evasão", "v": "0,000"}, {"l": "recall evasão", "v": "0,000"}, {"l": "precisão evasão", "v": "0,000"}, {"l": "AUC", "v": "–"}]}, {"label": "Regra de 1 variável (do treino)", "v": 0.8249, "lo": 0.7980234335311064, "hi": 0.8514354247830885, "kind": "base", "extra": [{"l": "F1 evasão", "v": "0,787"}, {"l": "recall evasão", "v": "0,792"}, {"l": "precisão evasão", "v": "0,781"}, {"l": "AUC", "v": "–"}]}, {"label": "Caminho no DAG de trajetórias", "v": 0.8159, "lo": 0.785, "hi": 0.8439, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,776"}, {"l": "AUC", "v": "0,904"}]}, {"label": "Função harmônica (grafo kNN)", "v": 0.845, "lo": 0.8182142857142858, "hi": 0.8716811715686597, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,811"}, {"l": "recall evasão", "v": "0,810"}, {"l": "precisão evasão", "v": "0,813"}, {"l": "AUC", "v": "0,935"}]}, {"label": "Corte mínimo sem viés (λ = 0)", "v": 0.8538, "lo": 0.8256151291518389, "hi": 0.8802207862188799, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,825"}, {"l": "recall evasão", "v": "0,764"}, {"l": "precisão evasão", "v": "0,897"}, {"l": "AUC", "v": "–"}]}, {"label": "Voto ponderado dos vizinhos (grafo kNN)", "v": 0.8538, "lo": 0.8265613467899524, "hi": 0.8807255192043288, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,822"}, {"l": "recall evasão", "v": "0,828"}, {"l": "precisão evasão", "v": "0,816"}, {"l": "AUC", "v": "0,937"}]}, {"label": "Corte mínimo só com variáveis essenciais (3 var.)", "v": 0.8577, "lo": 0.8316285284350353, "hi": 0.8826284046855791, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,825"}, {"l": "recall evasão", "v": "0,856"}, {"l": "precisão evasão", "v": "0,797"}, {"l": "AUC", "v": "0,906"}]}, {"label": "Corte mínimo / fluxo máximo (Edmonds–Karp)", "v": 0.8471, "lo": 0.8200044332383228, "hi": 0.8731348274166267, "kind": "ours", "extra": [{"l": "F1 evasão", "v": "0,813"}, {"l": "recall evasão", "v": "0,835"}, {"l": "precisão evasão", "v": "0,793"}, {"l": "AUC", "v": "0,937"}]}, {"label": "Regressão logística (referência externa)", "v": 0.8837, "lo": 0.860037698150916, "hi": 0.9057817037774909, "kind": "ref", "extra": [{"l": "F1 evasão", "v": "0,856"}, {"l": "recall evasão", "v": "0,887"}, {"l": "precisão evasão", "v": "0,826"}, {"l": "AUC", "v": "0,951"}]}]}, {"title": "T2 · fim do 2º semestre", "rows": [{"label": "Classe majoritária (sempre 'forma')", "v": 0.5, "lo": 0.5, "hi": 0.5, "kind": "base", "extra": [{"l": "F1 evasão", "v": "0,000"}, {"l": "recall evasão", "v": "0,000"}, {"l": "precisão evasão", "v": "0,000"}, {"l": "AUC", "v": "–"}]}, {"label": "Regra de 1 variável (do treino)", "v": 0.8599, "lo": 0.8323985322133407, "hi": 0.88581086259072, "kind": "base", "extra": [{"l": "F1 evasão", "v": "0,828"}, {"l": "recall evasão", "v": "0,856"}, {"l": "precisão evasão", "v": "0,802"}, {"l": "AUC", "v": "–"}]}, {"label": "Caminho no DAG de trajetórias", "v": 0.849, "lo": 0.8222, "hi": 0.8746, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,815"}, {"l": "AUC", "v": "0,924"}]}, {"label": "Corte mínimo só com variáveis essenciais (7 var.)", "v": 0.893, "lo": 0.8696184873848779, "hi": 0.9151143619105645, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,866"}, {"l": "recall evasão", "v": "0,901"}, {"l": "precisão evasão", "v": "0,834"}, {"l": "AUC", "v": "0,958"}]}, {"label": "Corte mínimo sem viés (λ = 0)", "v": 0.9027, "lo": 0.8781738938867832, "hi": 0.9245317604508413, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,887"}, {"l": "recall evasão", "v": "0,842"}, {"l": "precisão evasão", "v": "0,937"}, {"l": "AUC", "v": "–"}]}, {"label": "Voto ponderado dos vizinhos (grafo kNN)", "v": 0.9054, "lo": 0.8818434192788537, "hi": 0.9266124849765273, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,887"}, {"l": "recall evasão", "v": "0,870"}, {"l": "precisão evasão", "v": "0,905"}, {"l": "AUC", "v": "0,969"}]}, {"label": "Função harmônica (grafo kNN)", "v": 0.9065, "lo": 0.8815938056191204, "hi": 0.928977929728359, "kind": "graph", "extra": [{"l": "F1 evasão", "v": "0,889"}, {"l": "recall evasão", "v": "0,863"}, {"l": "precisão evasão", "v": "0,918"}, {"l": "AUC", "v": "0,969"}]}, {"label": "Corte mínimo / fluxo máximo (Edmonds–Karp)", "v": 0.8988, "lo": 0.8742052714787284, "hi": 0.9217546191933147, "kind": "ours", "extra": [{"l": "F1 evasão", "v": "0,877"}, {"l": "recall evasão", "v": "0,877"}, {"l": "precisão evasão", "v": "0,877"}, {"l": "AUC", "v": "0,965"}]}, {"label": "Regressão logística (referência externa)", "v": 0.9241, "lo": 0.9028536834660086, "hi": 0.9439213271426377, "kind": "ref", "extra": [{"l": "F1 evasão", "v": "0,904"}, {"l": "recall evasão", "v": "0,930"}, {"l": "precisão evasão", "v": "0,880"}, {"l": "AUC", "v": "0,975"}]}]}], "cl": {"T2": {"nodes": [{"id": "Marital status", "label": "Estado civil", "group": "demografico", "mi_target": 0.00836}, {"id": "Gender", "label": "Gênero", "group": "demografico", "mi_target": 0.04683}, {"id": "Age at enrollment", "label": "Idade no ingresso", "group": "demografico", "mi_target": 0.0809}, {"id": "Nacionality", "label": "Nacionalidade", "group": "demografico", "mi_target": 0.00011}, {"id": "International", "label": "Internacional", "group": "demografico", "mi_target": 0.00011}, {"id": "Displaced", "label": "Deslocado", "group": "demografico", "mi_target": 0.00848}, {"id": "Educational special needs", "label": "Necess. especiais", "group": "demografico", "mi_target": 3e-05}, {"id": "Mother's qualification", "label": "Escolaridade mãe", "group": "familia", "mi_target": 0.02212}, {"id": "Father's qualification", "label": "Escolaridade pai", "group": "familia", "mi_target": 0.02097}, {"id": "Mother's occupation", "label": "Ocupação mãe", "group": "familia", "mi_target": 0.02242}, {"id": "Father's occupation", "label": "Ocupação pai", "group": "familia", "mi_target": 0.01783}, {"id": "Debtor", "label": "Devedor", "group": "financeiro", "mi_target": 0.05191}, {"id": "Tuition fees up to date", "label": "Mensalidade em dia", "group": "financeiro", "mi_target": 0.14899}, {"id": "Scholarship holder", "label": "Bolsista", "group": "financeiro", "mi_target": 0.08291}, {"id": "Application mode", "label": "Modo de ingresso", "group": "ingresso", "mi_target": 0.07644}, {"id": "Application order", "label": "Ordem de opção", "group": "ingresso", "mi_target": 0.00913}, {"id": "Course", "label": "Curso", "group": "ingresso", "mi_target": 0.08988}, {"id": "Daytime/evening attendance", "label": "Turno", "group": "ingresso", "mi_target": 0.00501}, {"id": "Previous qualification", "label": "Formação prévia", "group": "ingresso", "mi_target": 0.02149}, {"id": "Previous qualification (grade)", "label": "Nota formação prévia", "group": "ingresso", "mi_target": 0.01857}, {"id": "Admission grade", "label": "Nota de admissão", "group": "ingresso", "mi_target": 0.01506}, {"id": "Curricular units 1st sem (credited)", "label": "S1 creditadas", "group": "academico_s1", "mi_target": 0.00347}, {"id": "Curricular units 1st sem (enrolled)", "label": "S1 inscritas", "group": "academico_s1", "mi_target": 0.04521}, {"id": "Curricular units 1st sem (evaluations)", "label": "S1 avaliações", "group": "academico_s1", "mi_target": 0.09061}, {"id": "Curricular units 1st sem (approved)", "label": "S1 aprovadas", "group": "academico_s1", "mi_target": 0.35013}, {"id": "Curricular units 1st sem (grade)", "label": "S1 nota", "group": "academico_s1", "mi_target": 0.21587}, {"id": "Curricular units 1st sem (without evaluations)", "label": "S1 sem avaliação", "group": "academico_s1", "mi_target": 0.00388}, {"id": "Curricular units 2nd sem (credited)", "label": "S2 creditadas", "group": "academico_s2", "mi_target": 0.0019}, {"id": "Curricular units 2nd sem (enrolled)", "label": "S2 inscritas", "group": "academico_s2", "mi_target": 0.04819}, {"id": "Curricular units 2nd sem (evaluations)", "label": "S2 avaliações", "group": "academico_s2", "mi_target": 0.09382}, {"id": "Curricular units 2nd sem (approved)", "label": "S2 aprovadas", "group": "academico_s2", "mi_target": 0.43006}, {"id": "Curricular units 2nd sem (grade)", "label": "S2 nota", "group": "academico_s2", "mi_target": 0.30009}, {"id": "Curricular units 2nd sem (without evaluations)", "label": "S2 sem avaliação", "group": "academico_s2", "mi_target": 0.00731}, {"id": "Unemployment rate", "label": "Desemprego (coorte)", "group": "macro", "mi_target": 0.00613}, {"id": "Inflation rate", "label": "Inflação (coorte)", "group": "macro", "mi_target": 0.00533}, {"id": "GDP", "label": "PIB (coorte)", "group": "macro", "mi_target": 0.00613}, {"id": "taxa_aprov_s1", "label": "Taxa aprovação S1", "group": "academico_s1", "mi_target": 0.38147}, {"id": "taxa_aprov_s2", "label": "Taxa aprovação S2", "group": "academico_s2", "mi_target": 0.47379}, {"id": "y", "label": "DESFECHO", "group": "desfecho"}], "edges": [{"u": "Unemployment rate", "v": "GDP", "mi": 3.30871, "stab": 1.0, "in_test": true}, {"u": "Unemployment rate", "v": "Inflation rate", "mi": 3.1151, "stab": 0.95, "in_test": true}, {"u": "Curricular units 1st sem (enrolled)", "v": "Curricular units 2nd sem (enrolled)", "mi": 1.6567, "stab": 1.0, "in_test": true}, {"u": "Course", "v": "Curricular units 1st sem (enrolled)", "mi": 1.25677, "stab": 1.0, "in_test": false}, {"u": "Curricular units 2nd sem (approved)", "v": "taxa_aprov_s2", "mi": 1.16968, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (approved)", "v": "Curricular units 2nd sem (approved)", "mi": 1.1667, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (approved)", "v": "taxa_aprov_s1", "mi": 1.09145, "stab": 1.0, "in_test": true}, {"u": "Curricular units 2nd sem (approved)", "v": "Curricular units 2nd sem (grade)", "mi": 0.83488, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (grade)", "v": "taxa_aprov_s1", "mi": 0.73532, "stab": 0.85, "in_test": false}, {"u": "Curricular units 1st sem (evaluations)", "v": "Curricular units 2nd sem (evaluations)", "mi": 0.68435, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Father's occupation", "mi": 0.66222, "stab": 1.0, "in_test": true}, {"u": "Age at enrollment", "v": "Application mode", "mi": 0.64748, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (enrolled)", "v": "Curricular units 1st sem (approved)", "mi": 0.6458, "stab": 0.83, "in_test": true}, {"u": "Mother's qualification", "v": "Mother's occupation", "mi": 0.55084, "stab": 1.0, "in_test": true}, {"u": "Mother's qualification", "v": "Father's qualification", "mi": 0.52868, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Previous qualification", "mi": 0.51524, "stab": 1.0, "in_test": true}, {"u": "Course", "v": "Daytime/evening attendance", "mi": 0.51283, "stab": 1.0, "in_test": true}, {"u": "taxa_aprov_s2", "v": "y", "mi": 0.47379, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (evaluations)", "v": "taxa_aprov_s1", "mi": 0.45959, "stab": 0.38, "in_test": false}, {"u": "Curricular units 1st sem (credited)", "v": "Curricular units 2nd sem (credited)", "mi": 0.45807, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (credited)", "v": "Curricular units 1st sem (enrolled)", "mi": 0.34699, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Course", "mi": 0.31318, "stab": 1.0, "in_test": true}, {"u": "Previous qualification (grade)", "v": "Admission grade", "mi": 0.31154, "stab": 1.0, "in_test": true}, {"u": "Marital status", "v": "Age at enrollment", "mi": 0.22638, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Application order", "mi": 0.17314, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Unemployment rate", "mi": 0.16047, "stab": 0.44, "in_test": false}, {"u": "Nacionality", "v": "International", "mi": 0.16021, "stab": 1.0, "in_test": true}, {"u": "Tuition fees up to date", "v": "y", "mi": 0.14899, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Course", "mi": 0.1382, "stab": 0.49, "in_test": false}, {"u": "Gender", "v": "Course", "mi": 0.13171, "stab": 1.0, "in_test": true}, {"u": "Displaced", "v": "Application mode", "mi": 0.12331, "stab": 0.65, "in_test": true}, {"u": "Debtor", "v": "Tuition fees up to date", "mi": 0.10511, "stab": 1.0, "in_test": true}, {"u": "Previous qualification", "v": "Previous qualification (grade)", "mi": 0.09233, "stab": 0.38, "in_test": false}, {"u": "Scholarship holder", "v": "y", "mi": 0.08291, "stab": 0.96, "in_test": true}, {"u": "Curricular units 1st sem (without evaluations)", "v": "Curricular units 2nd sem (without evaluations)", "mi": 0.07403, "stab": 0.98, "in_test": true}, {"u": "Course", "v": "Curricular units 1st sem (without evaluations)", "mi": 0.06417, "stab": 0.96, "in_test": false}, {"u": "Nacionality", "v": "Application mode", "mi": 0.01945, "stab": 0.93, "in_test": true}, {"u": "Educational special needs", "v": "Unemployment rate", "mi": 0.00722, "stab": 0.36, "in_test": true}]}, "T1": {"nodes": [{"id": "Marital status", "label": "Estado civil", "group": "demografico", "mi_target": 0.00836}, {"id": "Gender", "label": "Gênero", "group": "demografico", "mi_target": 0.04683}, {"id": "Age at enrollment", "label": "Idade no ingresso", "group": "demografico", "mi_target": 0.0809}, {"id": "Nacionality", "label": "Nacionalidade", "group": "demografico", "mi_target": 0.00011}, {"id": "International", "label": "Internacional", "group": "demografico", "mi_target": 0.00011}, {"id": "Displaced", "label": "Deslocado", "group": "demografico", "mi_target": 0.00848}, {"id": "Educational special needs", "label": "Necess. especiais", "group": "demografico", "mi_target": 3e-05}, {"id": "Mother's qualification", "label": "Escolaridade mãe", "group": "familia", "mi_target": 0.02212}, {"id": "Father's qualification", "label": "Escolaridade pai", "group": "familia", "mi_target": 0.02097}, {"id": "Mother's occupation", "label": "Ocupação mãe", "group": "familia", "mi_target": 0.02242}, {"id": "Father's occupation", "label": "Ocupação pai", "group": "familia", "mi_target": 0.01783}, {"id": "Debtor", "label": "Devedor", "group": "financeiro", "mi_target": 0.05191}, {"id": "Tuition fees up to date", "label": "Mensalidade em dia", "group": "financeiro", "mi_target": 0.14899}, {"id": "Scholarship holder", "label": "Bolsista", "group": "financeiro", "mi_target": 0.08291}, {"id": "Application mode", "label": "Modo de ingresso", "group": "ingresso", "mi_target": 0.07644}, {"id": "Application order", "label": "Ordem de opção", "group": "ingresso", "mi_target": 0.00913}, {"id": "Course", "label": "Curso", "group": "ingresso", "mi_target": 0.08988}, {"id": "Daytime/evening attendance", "label": "Turno", "group": "ingresso", "mi_target": 0.00501}, {"id": "Previous qualification", "label": "Formação prévia", "group": "ingresso", "mi_target": 0.02149}, {"id": "Previous qualification (grade)", "label": "Nota formação prévia", "group": "ingresso", "mi_target": 0.01857}, {"id": "Admission grade", "label": "Nota de admissão", "group": "ingresso", "mi_target": 0.01506}, {"id": "Curricular units 1st sem (credited)", "label": "S1 creditadas", "group": "academico_s1", "mi_target": 0.00347}, {"id": "Curricular units 1st sem (enrolled)", "label": "S1 inscritas", "group": "academico_s1", "mi_target": 0.04521}, {"id": "Curricular units 1st sem (evaluations)", "label": "S1 avaliações", "group": "academico_s1", "mi_target": 0.09061}, {"id": "Curricular units 1st sem (approved)", "label": "S1 aprovadas", "group": "academico_s1", "mi_target": 0.35013}, {"id": "Curricular units 1st sem (grade)", "label": "S1 nota", "group": "academico_s1", "mi_target": 0.21587}, {"id": "Curricular units 1st sem (without evaluations)", "label": "S1 sem avaliação", "group": "academico_s1", "mi_target": 0.00388}, {"id": "Unemployment rate", "label": "Desemprego (coorte)", "group": "macro", "mi_target": 0.00613}, {"id": "Inflation rate", "label": "Inflação (coorte)", "group": "macro", "mi_target": 0.00533}, {"id": "GDP", "label": "PIB (coorte)", "group": "macro", "mi_target": 0.00613}, {"id": "taxa_aprov_s1", "label": "Taxa aprovação S1", "group": "academico_s1", "mi_target": 0.38147}, {"id": "y", "label": "DESFECHO", "group": "desfecho"}], "edges": [{"u": "Unemployment rate", "v": "GDP", "mi": 3.30871, "stab": 1.0, "in_test": true}, {"u": "Unemployment rate", "v": "Inflation rate", "mi": 3.1151, "stab": 0.84, "in_test": true}, {"u": "Course", "v": "Curricular units 1st sem (enrolled)", "mi": 1.25677, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (approved)", "v": "taxa_aprov_s1", "mi": 1.09145, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (grade)", "v": "taxa_aprov_s1", "mi": 0.73532, "stab": 0.82, "in_test": false}, {"u": "Mother's occupation", "v": "Father's occupation", "mi": 0.66222, "stab": 1.0, "in_test": true}, {"u": "Age at enrollment", "v": "Application mode", "mi": 0.64748, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (enrolled)", "v": "Curricular units 1st sem (approved)", "mi": 0.6458, "stab": 1.0, "in_test": true}, {"u": "Mother's qualification", "v": "Mother's occupation", "mi": 0.55084, "stab": 1.0, "in_test": true}, {"u": "Mother's qualification", "v": "Father's qualification", "mi": 0.52868, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Previous qualification", "mi": 0.51524, "stab": 1.0, "in_test": true}, {"u": "Course", "v": "Daytime/evening attendance", "mi": 0.51283, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (evaluations)", "v": "taxa_aprov_s1", "mi": 0.45959, "stab": 0.34, "in_test": false}, {"u": "taxa_aprov_s1", "v": "y", "mi": 0.38147, "stab": 1.0, "in_test": true}, {"u": "Curricular units 1st sem (credited)", "v": "Curricular units 1st sem (enrolled)", "mi": 0.34699, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Course", "mi": 0.31318, "stab": 1.0, "in_test": true}, {"u": "Previous qualification (grade)", "v": "Admission grade", "mi": 0.31154, "stab": 1.0, "in_test": true}, {"u": "Marital status", "v": "Age at enrollment", "mi": 0.22638, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Application order", "mi": 0.17314, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Unemployment rate", "mi": 0.16047, "stab": 0.4, "in_test": false}, {"u": "Nacionality", "v": "International", "mi": 0.16021, "stab": 1.0, "in_test": true}, {"u": "Tuition fees up to date", "v": "y", "mi": 0.14899, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Course", "mi": 0.1382, "stab": 0.49, "in_test": false}, {"u": "Gender", "v": "Course", "mi": 0.13171, "stab": 1.0, "in_test": true}, {"u": "Displaced", "v": "Application mode", "mi": 0.12331, "stab": 0.68, "in_test": true}, {"u": "Debtor", "v": "Tuition fees up to date", "mi": 0.10511, "stab": 1.0, "in_test": true}, {"u": "Previous qualification", "v": "Previous qualification (grade)", "mi": 0.09233, "stab": 0.36, "in_test": false}, {"u": "Scholarship holder", "v": "y", "mi": 0.08291, "stab": 0.94, "in_test": true}, {"u": "Course", "v": "Curricular units 1st sem (without evaluations)", "mi": 0.06417, "stab": 1.0, "in_test": true}, {"u": "Nacionality", "v": "Application mode", "mi": 0.01945, "stab": 0.89, "in_test": true}, {"u": "Educational special needs", "v": "Unemployment rate", "mi": 0.00722, "stab": 0.39, "in_test": true}]}, "T0": {"nodes": [{"id": "Marital status", "label": "Estado civil", "group": "demografico", "mi_target": 0.00836}, {"id": "Gender", "label": "Gênero", "group": "demografico", "mi_target": 0.04683}, {"id": "Age at enrollment", "label": "Idade no ingresso", "group": "demografico", "mi_target": 0.0809}, {"id": "Nacionality", "label": "Nacionalidade", "group": "demografico", "mi_target": 0.00011}, {"id": "International", "label": "Internacional", "group": "demografico", "mi_target": 0.00011}, {"id": "Displaced", "label": "Deslocado", "group": "demografico", "mi_target": 0.00848}, {"id": "Educational special needs", "label": "Necess. especiais", "group": "demografico", "mi_target": 3e-05}, {"id": "Mother's qualification", "label": "Escolaridade mãe", "group": "familia", "mi_target": 0.02212}, {"id": "Father's qualification", "label": "Escolaridade pai", "group": "familia", "mi_target": 0.02097}, {"id": "Mother's occupation", "label": "Ocupação mãe", "group": "familia", "mi_target": 0.02242}, {"id": "Father's occupation", "label": "Ocupação pai", "group": "familia", "mi_target": 0.01783}, {"id": "Debtor", "label": "Devedor", "group": "financeiro", "mi_target": 0.05191}, {"id": "Tuition fees up to date", "label": "Mensalidade em dia", "group": "financeiro", "mi_target": 0.14899}, {"id": "Scholarship holder", "label": "Bolsista", "group": "financeiro", "mi_target": 0.08291}, {"id": "Application mode", "label": "Modo de ingresso", "group": "ingresso", "mi_target": 0.07644}, {"id": "Application order", "label": "Ordem de opção", "group": "ingresso", "mi_target": 0.00913}, {"id": "Course", "label": "Curso", "group": "ingresso", "mi_target": 0.08988}, {"id": "Daytime/evening attendance", "label": "Turno", "group": "ingresso", "mi_target": 0.00501}, {"id": "Previous qualification", "label": "Formação prévia", "group": "ingresso", "mi_target": 0.02149}, {"id": "Previous qualification (grade)", "label": "Nota formação prévia", "group": "ingresso", "mi_target": 0.01857}, {"id": "Admission grade", "label": "Nota de admissão", "group": "ingresso", "mi_target": 0.01506}, {"id": "Unemployment rate", "label": "Desemprego (coorte)", "group": "macro", "mi_target": 0.00613}, {"id": "Inflation rate", "label": "Inflação (coorte)", "group": "macro", "mi_target": 0.00533}, {"id": "GDP", "label": "PIB (coorte)", "group": "macro", "mi_target": 0.00613}, {"id": "y", "label": "DESFECHO", "group": "desfecho"}], "edges": [{"u": "Unemployment rate", "v": "GDP", "mi": 3.30871, "stab": 1.0, "in_test": true}, {"u": "Unemployment rate", "v": "Inflation rate", "mi": 3.1151, "stab": 0.87, "in_test": true}, {"u": "Mother's occupation", "v": "Father's occupation", "mi": 0.66222, "stab": 1.0, "in_test": true}, {"u": "Age at enrollment", "v": "Application mode", "mi": 0.64748, "stab": 1.0, "in_test": true}, {"u": "Mother's qualification", "v": "Mother's occupation", "mi": 0.55084, "stab": 1.0, "in_test": true}, {"u": "Mother's qualification", "v": "Father's qualification", "mi": 0.52868, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Previous qualification", "mi": 0.51524, "stab": 1.0, "in_test": true}, {"u": "Course", "v": "Daytime/evening attendance", "mi": 0.51283, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Course", "mi": 0.31318, "stab": 1.0, "in_test": true}, {"u": "Previous qualification (grade)", "v": "Admission grade", "mi": 0.31154, "stab": 1.0, "in_test": true}, {"u": "Marital status", "v": "Age at enrollment", "mi": 0.22638, "stab": 1.0, "in_test": true}, {"u": "Application mode", "v": "Application order", "mi": 0.17314, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Unemployment rate", "mi": 0.16047, "stab": 0.43, "in_test": false}, {"u": "Nacionality", "v": "International", "mi": 0.16021, "stab": 1.0, "in_test": true}, {"u": "Tuition fees up to date", "v": "y", "mi": 0.14899, "stab": 1.0, "in_test": true}, {"u": "Mother's occupation", "v": "Course", "mi": 0.1382, "stab": 0.53, "in_test": false}, {"u": "Gender", "v": "Course", "mi": 0.13171, "stab": 1.0, "in_test": true}, {"u": "Displaced", "v": "Application mode", "mi": 0.12331, "stab": 0.63, "in_test": true}, {"u": "Debtor", "v": "Tuition fees up to date", "mi": 0.10511, "stab": 1.0, "in_test": true}, {"u": "Previous qualification", "v": "Previous qualification (grade)", "mi": 0.09233, "stab": 0.33, "in_test": false}, {"u": "Course", "v": "y", "mi": 0.08988, "stab": 0.84, "in_test": true}, {"u": "Scholarship holder", "v": "y", "mi": 0.08291, "stab": 0.98, "in_test": true}, {"u": "Nacionality", "v": "Application mode", "mi": 0.01945, "stab": 0.87, "in_test": true}, {"u": "Educational special needs", "v": "Unemployment rate", "mi": 0.00722, "stab": 0.43, "in_test": true}]}}, "sankey": {"layers": [{"title": "Ingresso (bolsa × idade)", "nodes": [{"id": "L0:Bolsista & Idade<=20", "label": "Bolsista & Idade<=20", "n": 602, "rate": 0.11627906976744186}, {"id": "L0:Bolsista & 20<Idade<=23", "label": "Bolsista & 20<Idade<=23", "n": 101, "rate": 0.1485148514851485}, {"id": "L0:Bolsista & Idade>23", "label": "Bolsista & Idade>23", "n": 92, "rate": 0.25}, {"id": "L0:Sem bolsa & Idade<=20", "label": "Sem bolsa & Idade<=20", "n": 1056, "rate": 0.3399621212121212}, {"id": "L0:Sem bolsa & 20<Idade<=23", "label": "Sem bolsa & 20<Idade<=23", "n": 275, "rate": 0.52}, {"id": "L0:Sem bolsa & Idade>23", "label": "Sem bolsa & Idade>23", "n": 778, "rate": 0.6773778920308483}]}, {"title": "Financeiro", "nodes": [{"id": "L1:em dia, sem divida", "label": "em dia, sem dívida", "n": 2378, "rate": 0.2956265769554247}, {"id": "L1:em dia, devedor", "label": "em dia, devedor", "n": 143, "rate": 0.5174825174825175}, {"id": "L1:atrasada, sem divida", "label": "atrasada, sem dívida", "n": 197, "rate": 0.934010152284264}, {"id": "L1:atrasada, devedor", "label": "atrasada, devedor", "n": 186, "rate": 0.946236559139785}]}, {"title": "Aprovação S1", "nodes": [{"id": "L2:100%", "label": "100%", "n": 1268, "rate": 0.10252365930599369}, {"id": "L2:[50,100%)", "label": "[50,100%)", "n": 954, "rate": 0.40461215932914046}, {"id": "L2:(0,50%)", "label": "(0,50%)", "n": 177, "rate": 0.9774011299435028}, {"id": "L2:0%", "label": "0%", "n": 387, "rate": 0.9948320413436692}, {"id": "L2:sem inscricao", "label": "sem inscrição", "n": 118, "rate": 0.5338983050847458}]}, {"title": "Aprovação S2", "nodes": [{"id": "L3:100%", "label": "100%", "n": 1195, "rate": 0.07112970711297072}, {"id": "L3:[50,100%)", "label": "[50,100%)", "n": 893, "rate": 0.3348264277715566}, {"id": "L3:(0,50%)", "label": "(0,50%)", "n": 184, "rate": 0.9565217391304348}, {"id": "L3:0%", "label": "0%", "n": 514, "rate": 1.0}, {"id": "L3:sem inscricao", "label": "sem inscrição", "n": 118, "rate": 0.5338983050847458}]}, {"title": "Desfecho", "nodes": [{"id": "L4:Graduate", "label": "Graduate", "n": 1767, "rate": 0.0}, {"id": "L4:Dropout", "label": "Dropout", "n": 1137, "rate": 1.0}]}], "links": [{"s": "L0:Sem bolsa & Idade<=20", "t": "L1:em dia, sem divida", "n": 907, "rate": 0.26350606394707826}, {"s": "L1:em dia, sem divida", "t": "L2:sem inscricao", "n": 96, "rate": 0.4583333333333333}, {"s": "L2:sem inscricao", "t": "L3:sem inscricao", "n": 118, "rate": 0.5338983050847458}, {"s": "L3:sem inscricao", "t": "L4:Dropout", "n": 63, "rate": 1.0}, {"s": "L0:Sem bolsa & Idade<=20", "t": "L1:atrasada, sem divida", "n": 50, "rate": 0.88}, {"s": "L1:atrasada, sem divida", "t": "L2:100%", "n": 16, "rate": 0.4375}, {"s": "L2:100%", "t": "L3:100%", "n": 1000, "rate": 0.06}, {"s": "L3:100%", "t": "L4:Graduate", "n": 1110, "rate": 0.0}, {"s": "L1:atrasada, sem divida", "t": "L2:0%", "n": 87, "rate": 1.0}, {"s": "L2:0%", "t": "L3:0%", "n": 369, "rate": 1.0}, {"s": "L3:0%", "t": "L4:Dropout", "n": 514, "rate": 1.0}, {"s": "L0:Sem bolsa & Idade>23", "t": "L1:em dia, sem divida", "n": 533, "rate": 0.5553470919324578}, {"s": "L1:em dia, sem divida", "t": "L2:[50,100%)", "n": 785, "rate": 0.3070063694267516}, {"s": "L2:[50,100%)", "t": "L3:100%", "n": 191, "rate": 0.13089005235602094}, {"s": "L0:Sem bolsa & Idade>23", "t": "L1:em dia, devedor", "n": 38, "rate": 0.7368421052631579}, {"s": "L1:em dia, devedor", "t": "L2:100%", "n": 63, "rate": 0.19047619047619047}, {"s": "L0:Sem bolsa & 20<Idade<=23", "t": "L1:atrasada, sem divida", "n": 28, "rate": 0.9285714285714286}, {"s": "L0:Bolsista & 20<Idade<=23", "t": "L1:em dia, sem divida", "n": 93, "rate": 0.10752688172043011}, {"s": "L1:em dia, sem divida", "t": "L2:100%", "n": 1168, "rate": 0.08133561643835617}, {"s": "L0:Sem bolsa & Idade<=20", "t": "L1:atrasada, devedor", "n": 48, "rate": 0.9791666666666666}, {"s": "L1:atrasada, devedor", "t": "L2:[50,100%)", "n": 71, "rate": 0.9436619718309859}, {"s": "L2:[50,100%)", "t": "L3:(0,50%)", "n": 90, "rate": 0.9777777777777777}, {"s": "L3:(0,50%)", "t": "L4:Dropout", "n": 176, "rate": 1.0}, {"s": "L2:100%", "t": "L3:[50,100%)", "n": 248, "rate": 0.2217741935483871}, {"s": "L3:[50,100%)", "t": "L4:Graduate", "n": 594, "rate": 0.0}, {"s": "L0:Bolsista & Idade<=20", "t": "L1:em dia, sem divida", "n": 560, "rate": 0.09464285714285714}, {"s": "L2:[50,100%)", "t": "L3:[50,100%)", "n": 621, "rate": 0.355877616747182}, {"s": "L1:em dia, sem divida", "t": "L2:0%", "n": 229, "rate": 0.9912663755458515}, {"s": "L2:[50,100%)", "t": "L3:0%", "n": 52, "rate": 1.0}, {"s": "L3:sem inscricao", "t": "L4:Graduate", "n": 55, "rate": 0.0}, {"s": "L0:Sem bolsa & Idade>23", "t": "L1:atrasada, devedor", "n": 98, "rate": 0.9693877551020408}, {"s": "L1:atrasada, devedor", "t": "L2:0%", "n": 58, "rate": 1.0}, {"s": "L2:0%", "t": "L3:(0,50%)", "n": 15, "rate": 1.0}, {"s": "L1:em dia, sem divida", "t": "L2:(0,50%)", "n": 100, "rate": 0.96}, {"s": "L2:(0,50%)", "t": "L3:(0,50%)", "n": 66, "rate": 0.9848484848484849}, {"s": "L0:Sem bolsa & Idade<=20", "t": "L1:em dia, devedor", "n": 51, "rate": 0.5686274509803921}, {"s": "L1:em dia, devedor", "t": "L2:[50,100%)", "n": 45, "rate": 0.6222222222222222}, {"s": "L0:Sem bolsa & 20<Idade<=23", "t": "L1:em dia, sem divida", "n": 210, "rate": 0.4238095238095238}, {"s": "L0:Bolsista & Idade>23", "t": "L1:em dia, sem divida", "n": 75, "rate": 0.21333333333333335}, {"s": "L3:100%", "t": "L4:Dropout", "n": 85, "rate": 1.0}, {"s": "L3:[50,100%)", "t": "L4:Dropout", "n": 299, "rate": 1.0}, {"s": "L0:Bolsista & Idade<=20", "t": "L1:em dia, devedor", "n": 26, "rate": 0.2692307692307692}, {"s": "L2:(0,50%)", "t": "L3:0%", "n": 86, "rate": 1.0}, {"s": "L0:Sem bolsa & 20<Idade<=23", "t": "L1:em dia, devedor", "n": 15, "rate": 0.5333333333333333}, {"s": "L0:Sem bolsa & Idade>23", "t": "L1:atrasada, sem divida", "n": 109, "rate": 0.9908256880733946}, {"s": "L1:atrasada, sem divida", "t": "L2:[50,100%)", "n": 53, "rate": 0.9433962264150944}, {"s": "L0:Bolsista & Idade>23", "t": "L1:atrasada, devedor", "n": 5, "rate": 0.8}, {"s": "L1:atrasada, devedor", "t": "L2:(0,50%)", "n": 29, "rate": 1.0}, {"s": "L0:Sem bolsa & 20<Idade<=23", "t": "L1:atrasada, devedor", "n": 22, "rate": 0.9090909090909091}, {"s": "L1:atrasada, sem divida", "t": "L2:(0,50%)", "n": 32, "rate": 1.0}, {"s": "L2:(0,50%)", "t": "L3:[50,100%)", "n": 22, "rate": 1.0}, {"s": "L2:100%", "t": "L3:(0,50%)", "n": 13, "rate": 0.6153846153846154}, {"s": "L3:(0,50%)", "t": "L4:Graduate", "n": 8, "rate": 0.0}, {"s": "L2:100%", "t": "L3:0%", "n": 7, "rate": 1.0}, {"s": "L2:(0,50%)", "t": "L3:100%", "n": 3, "rate": 0.0}, {"s": "L1:em dia, devedor", "t": "L2:0%", "n": 13, "rate": 1.0}, {"s": "L0:Bolsista & Idade>23", "t": "L1:em dia, devedor", "n": 11, "rate": 0.18181818181818182}, {"s": "L0:Bolsista & Idade<=20", "t": "L1:atrasada, devedor", "n": 9, "rate": 0.6666666666666666}, {"s": "L1:atrasada, devedor", "t": "L2:100%", "n": 21, "rate": 0.7619047619047619}, {"s": "L1:atrasada, devedor", "t": "L2:sem inscricao", "n": 7, "rate": 0.8571428571428571}, {"s": "L1:em dia, devedor", "t": "L2:(0,50%)", "n": 16, "rate": 1.0}, {"s": "L0:Bolsista & 20<Idade<=23", "t": "L1:atrasada, devedor", "n": 4, "rate": 1.0}, {"s": "L0:Bolsista & Idade>23", "t": "L1:atrasada, sem divida", "n": 1, "rate": 1.0}, {"s": "L0:Bolsista & 20<Idade<=23", "t": "L1:atrasada, sem divida", "n": 2, "rate": 0.5}, {"s": "L1:em dia, devedor", "t": "L2:sem inscricao", "n": 6, "rate": 0.8333333333333334}, {"s": "L0:Bolsista & Idade<=20", "t": "L1:atrasada, sem divida", "n": 7, "rate": 0.5714285714285714}, {"s": "L1:atrasada, sem divida", "t": "L2:sem inscricao", "n": 9, "rate": 0.8888888888888888}, {"s": "L0:Bolsista & 20<Idade<=23", "t": "L1:em dia, devedor", "n": 2, "rate": 0.0}, {"s": "L2:0%", "t": "L3:100%", "n": 1, "rate": 0.0}, {"s": "L2:0%", "t": "L3:[50,100%)", "n": 2, "rate": 0.5}]}, "hc": {"nodes": [{"id": 0, "k": 0, "n": 600, "rate": 0.065, "rate_test": 0.01694915254237288, "n_test": 118, "label": "nenhuma flag de risco", "jit": -18}, {"id": 2, "k": 1, "n": 24, "rate": 0.125, "rate_test": 0.0, "n_test": 9, "label": "Devedor", "jit": 6}, {"id": 4, "k": 1, "n": 842, "rate": 0.12945368171021376, "rate_test": 0.09734513274336283, "n_test": 226, "label": "Sem bolsa", "jit": -12}, {"id": 5, "k": 2, "n": 19, "rate": 0.631578947368421, "rate_test": 0.6428571428571429, "n_test": 14, "label": "Mensalidade atrasada + Sem bolsa", "jit": 0}, {"id": 6, "k": 2, "n": 43, "rate": 0.37209302325581395, "rate_test": 0.3333333333333333, "n_test": 12, "label": "Devedor + Sem bolsa", "jit": 12}, {"id": 7, "k": 3, "n": 23, "rate": 0.9565217391304348, "rate_test": 1.0, "n_test": 5, "label": "Mensalidade atrasada + Devedor + Sem bolsa", "jit": -18}, {"id": 8, "k": 1, "n": 74, "rate": 0.08108108108108109, "rate_test": 0.0, "n_test": 11, "label": "Idade ingresso ≥ 23", "jit": -6}, {"id": 12, "k": 2, "n": 339, "rate": 0.26548672566371684, "rate_test": 0.20987654320987653, "n_test": 81, "label": "Sem bolsa + Idade ingresso ≥ 23", "jit": 0}, {"id": 13, "k": 3, "n": 22, "rate": 0.9545454545454546, "rate_test": 1.0, "n_test": 5, "label": "Mensalidade atrasada + Sem bolsa + Idade ingresso ≥ 23", "jit": 12}, {"id": 14, "k": 3, "n": 20, "rate": 0.45, "rate_test": 0.5, "n_test": 4, "label": "Devedor + Sem bolsa + Idade ingresso ≥ 23", "jit": -18}, {"id": 15, "k": 4, "n": 28, "rate": 0.8928571428571429, "rate_test": 1.0, "n_test": 8, "label": "Mensalidade atrasada + Devedor + Sem bolsa + Idade ingresso ≥ 23", "jit": -6}, {"id": 36, "k": 2, "n": 50, "rate": 1.0, "rate_test": 1.0, "n_test": 10, "label": "Sem bolsa + Aprovação S2 < 50%", "jit": -6}, {"id": 39, "k": 4, "n": 20, "rate": 0.95, "rate_test": null, "n_test": 0, "label": "Mensalidade atrasada + Devedor + Sem bolsa + Aprovação S2 < 50%", "jit": -12}, {"id": 44, "k": 3, "n": 36, "rate": 0.8888888888888888, "rate_test": 1.0, "n_test": 7, "label": "Sem bolsa + Idade ingresso ≥ 23 + Aprovação S2 < 50%", "jit": 6}, {"id": 45, "k": 4, "n": 13, "rate": 1.0, "rate_test": 1.0, "n_test": 2, "label": "Mensalidade atrasada + Sem bolsa + Idade ingresso ≥ 23 + Aprovação S2 < 50%", "jit": 18}, {"id": 47, "k": 5, "n": 11, "rate": 1.0, "rate_test": 1.0, "n_test": 1, "label": "Mensalidade atrasada + Devedor + Sem bolsa + Idade ingresso ≥ 23 + Aprovação S2 < 50%", "jit": 0}, {"id": 48, "k": 2, "n": 29, "rate": 0.4827586206896552, "rate_test": 0.38461538461538464, "n_test": 13, "label": "Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": 12}, {"id": 52, "k": 3, "n": 181, "rate": 0.8232044198895028, "rate_test": 0.8275862068965517, "n_test": 58, "label": "Sem bolsa + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": 18}, {"id": 53, "k": 4, "n": 45, "rate": 0.9777777777777777, "rate_test": 1.0, "n_test": 9, "label": "Mensalidade atrasada + Sem bolsa + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": -12}, {"id": 54, "k": 4, "n": 13, "rate": 0.9230769230769231, "rate_test": 1.0, "n_test": 4, "label": "Devedor + Sem bolsa + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": 0}, {"id": 55, "k": 5, "n": 17, "rate": 0.9411764705882353, "rate_test": 1.0, "n_test": 5, "label": "Mensalidade atrasada + Devedor + Sem bolsa + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": 12}, {"id": 56, "k": 3, "n": 12, "rate": 0.8333333333333334, "rate_test": 1.0, "n_test": 2, "label": "Idade ingresso ≥ 23 + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": -18}, {"id": 60, "k": 4, "n": 189, "rate": 0.9788359788359788, "rate_test": 1.0, "n_test": 44, "label": "Sem bolsa + Idade ingresso ≥ 23 + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": -12}, {"id": 61, "k": 5, "n": 76, "rate": 1.0, "rate_test": 1.0, "n_test": 21, "label": "Mensalidade atrasada + Sem bolsa + Idade ingresso ≥ 23 + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": 0}, {"id": 62, "k": 5, "n": 13, "rate": 1.0, "rate_test": 1.0, "n_test": 6, "label": "Devedor + Sem bolsa + Idade ingresso ≥ 23 + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": 12}, {"id": 63, "k": 6, "n": 65, "rate": 1.0, "rate_test": 1.0, "n_test": 15, "label": "Mensalidade atrasada + Devedor + Sem bolsa + Idade ingresso ≥ 23 + Aprovação S1 < 50% + Aprovação S2 < 50%", "jit": -18}], "edges": [{"u": 0, "v": 2, "highlight": false}, {"u": 0, "v": 4, "highlight": false}, {"u": 0, "v": 8, "highlight": false}, {"u": 2, "v": 6, "highlight": false}, {"u": 4, "v": 5, "highlight": false}, {"u": 4, "v": 6, "highlight": false}, {"u": 4, "v": 12, "highlight": false}, {"u": 4, "v": 36, "highlight": false}, {"u": 5, "v": 7, "highlight": false}, {"u": 5, "v": 13, "highlight": false}, {"u": 6, "v": 7, "highlight": false}, {"u": 6, "v": 14, "highlight": false}, {"u": 7, "v": 15, "highlight": false}, {"u": 7, "v": 39, "highlight": false}, {"u": 8, "v": 12, "highlight": true}, {"u": 12, "v": 13, "highlight": false}, {"u": 12, "v": 14, "highlight": false}, {"u": 12, "v": 44, "highlight": true}, {"u": 13, "v": 15, "highlight": false}, {"u": 13, "v": 45, "highlight": false}, {"u": 14, "v": 15, "highlight": false}, {"u": 15, "v": 47, "highlight": false}, {"u": 36, "v": 44, "highlight": false}, {"u": 36, "v": 52, "highlight": false}, {"u": 39, "v": 47, "highlight": false}, {"u": 39, "v": 55, "highlight": false}, {"u": 44, "v": 45, "highlight": false}, {"u": 44, "v": 60, "highlight": true}, {"u": 45, "v": 47, "highlight": false}, {"u": 45, "v": 61, "highlight": false}, {"u": 47, "v": 63, "highlight": false}, {"u": 48, "v": 52, "highlight": false}, {"u": 48, "v": 56, "highlight": false}, {"u": 52, "v": 53, "highlight": false}, {"u": 52, "v": 54, "highlight": false}, {"u": 52, "v": 60, "highlight": false}, {"u": 53, "v": 55, "highlight": false}, {"u": 53, "v": 61, "highlight": false}, {"u": 54, "v": 55, "highlight": false}, {"u": 54, "v": 62, "highlight": false}, {"u": 55, "v": 63, "highlight": false}, {"u": 56, "v": 60, "highlight": false}, {"u": 60, "v": 61, "highlight": false}, {"u": 60, "v": 62, "highlight": false}, {"u": 61, "v": 63, "highlight": false}, {"u": 62, "v": 63, "highlight": false}]}, "base": 0.3915, "vars": [{"var": "Taxa de aprovação S2", "grupo": "academico_s2", "mi_tr": 0.4737857332669878, "mi_te": 0.5481708060976044, "v_tr": 0.7381686364024966, "v_te": 0.778547171317401, "dir": "valor maior diminui evasao (monotonico)", "rep": "sim"}, {"var": "S2 aprovadas", "grupo": "academico_s2", "mi_tr": 0.43005853524785354, "mi_te": 0.45558525169732306, "v_tr": 0.7325349369073906, "v_te": 0.746467303852339, "dir": "nao monotonico (tendencia rho=-0.67); pico de risco em 1-2, minimo em 7+", "rep": "sim"}, {"var": "Taxa de aprovação S1", "grupo": "academico_s1", "mi_tr": 0.3814747361847691, "mi_te": 0.4316845220230819, "v_tr": 0.6694745766268205, "v_te": 0.7059941245173528, "dir": "valor maior diminui evasao (monotonico)", "rep": "sim"}, {"var": "S1 aprovadas", "grupo": "academico_s1", "mi_tr": 0.3501331502954872, "mi_te": 0.36206436122426566, "v_tr": 0.6689666230126821, "v_te": 0.6780572476695926, "dir": "nao monotonico (tendencia rho=-0.62); pico de risco em 1-2, minimo em 7+", "rep": "sim"}, {"var": "S2 média", "grupo": "academico_s2", "mi_tr": 0.3000890957899903, "mi_te": 0.28106827444201554, "v_tr": 0.6186608144493216, "v_te": 0.603987870274344, "dir": "valor maior diminui evasao (monotonico)", "rep": "sim"}, {"var": "S1 média", "grupo": "academico_s1", "mi_tr": 0.2158683183283755, "mi_te": 0.21388370337168455, "v_tr": 0.5308806526232315, "v_te": 0.5307576950346256, "dir": "valor maior diminui evasao (monotonico)", "rep": "sim"}, {"var": "Mensalidade em dia", "grupo": "financeiro", "mi_tr": 0.14899269597953668, "mi_te": 0.1636662874090281, "v_tr": 0.437948907026909, "v_te": 0.4587202651324526, "dir": "mensalidade_em_dia=atrasada: aumenta evasao (vs em dia)", "rep": "sim"}, {"var": "S2 avaliações", "grupo": "academico_s2", "mi_tr": 0.09382267800978042, "mi_te": 0.08201133690229764, "v_tr": 0.3559846810734736, "v_te": 0.3322407695684111, "dir": "nao monotonico (tendencia rho=-0.08); pico de risco em 0, minimo em 7-8", "rep": "sim"}, {"var": "S1 avaliações", "grupo": "academico_s1", "mi_tr": 0.09060610235794549, "mi_te": 0.060548197740734166, "v_tr": 0.34969754193672226, "v_te": 0.288892588852894, "dir": "nao monotonico (tendencia rho=-0.01); pico de risco em 0, minimo em 7-8", "rep": "sim"}, {"var": "Curso", "grupo": "ingresso", "mi_tr": 0.08987780352953116, "mi_te": 0.1134539846905051, "v_tr": 0.3456062612679699, "v_te": 0.38629059671853155, "dir": "depende da categoria", "rep": "sim"}, {"var": "Bolsista", "grupo": "financeiro", "mi_tr": 0.08290896114515724, "mi_te": 0.06174867250852366, "v_tr": 0.3216176797943684, "v_te": 0.2781343095471794, "dir": "bolsista=sim: diminui evasao (vs nao)", "rep": "sim"}, {"var": "Idade no ingresso", "grupo": "demografico", "mi_tr": 0.08089531118097025, "mi_te": 0.08900307300869731, "v_tr": 0.3349220128034185, "v_te": 0.35135234601092824, "dir": "valor maior aumenta evasao (monotonico)", "rep": "sim"}, {"var": "Modo de ingresso", "grupo": "ingresso", "mi_tr": 0.0764435455580889, "mi_te": 0.08649328953779604, "v_tr": 0.32444346267739127, "v_te": 0.344488131885812, "dir": "depende da categoria", "rep": "sim"}, {"var": "Devedor", "grupo": "financeiro", "mi_tr": 0.051907619512794344, "mi_te": 0.04694915282663916, "v_tr": 0.26975376481541147, "v_te": 0.25713198150361666, "dir": "devedor=sim: aumenta evasao (vs nao)", "rep": "sim"}, {"var": "S2 inscritas", "grupo": "academico_s2", "mi_tr": 0.04819458845590079, "mi_te": 0.046279266313422274, "v_tr": 0.2576889042476277, "v_te": 0.25063362448772536, "dir": "nao monotonico (tendencia rho=-0.26); pico de risco em 1-5, minimo em 7-8", "rep": "sim"}, {"var": "Gênero", "grupo": "demografico", "mi_tr": 0.046833600723175856, "mi_te": 0.040937175055038036, "v_tr": 0.255998296103969, "v_te": 0.2385016203610797, "dir": "genero=masculino: aumenta evasao (vs feminino)", "rep": "sim"}, {"var": "S1 inscritas", "grupo": "academico_s1", "mi_tr": 0.04521241541251564, "mi_te": 0.04676819184104805, "v_tr": 0.24950602938530686, "v_te": 0.2515027903267922, "dir": "nao monotonico (tendencia rho=-0.24); pico de risco em 1-5, minimo em 7-8", "rep": "sim"}, {"var": "Ocupação da mãe", "grupo": "familia", "mi_tr": 0.022420200379286388, "mi_te": 0.026117805520551356, "v_tr": 0.17760668643040156, "v_te": 0.19216650806056662, "dir": "depende da categoria", "rep": "sim"}, {"var": "Escolaridade da mãe", "grupo": "familia", "mi_tr": 0.02211769203043744, "mi_te": 0.03429392231395004, "v_tr": 0.1756899379858418, "v_te": 0.2175241734571012, "dir": "depende da categoria", "rep": "sim"}, {"var": "Formação prévia", "grupo": "ingresso", "mi_tr": 0.02148704010301599, "mi_te": 0.028984545496413973, "v_tr": 0.1746834312664641, "v_te": 0.202264000155321, "dir": "depende da categoria", "rep": "sim"}, {"var": "Escolaridade do pai", "grupo": "familia", "mi_tr": 0.020970366650968148, "mi_te": 0.03314208112439232, "v_tr": 0.17095368667224697, "v_te": 0.21229249793339316, "dir": "depende da categoria", "rep": "sim"}, {"var": "Nota formação prévia", "grupo": "ingresso", "mi_tr": 0.018573631812513414, "mi_te": 0.012304163148928602, "v_tr": 0.15971366085083835, "v_te": 0.13145326830045415, "dir": "nao monotonico (tendencia rho=-0.14); pico de risco em Q1 (<125.0), minimo em Q4 (>=140.0)", "rep": "parcial (direcao global ok; alguns bins invertem)"}, {"var": "Ocupação do pai", "grupo": "familia", "mi_tr": 0.01782592230293447, "mi_te": 0.023228255406126434, "v_tr": 0.15826582744039697, "v_te": 0.18078289238494752, "dir": "depende da categoria", "rep": "sim"}, {"var": "Nota de admissão", "grupo": "ingresso", "mi_tr": 0.015056627852520757, "mi_te": 0.002546240634030689, "v_tr": 0.14515115670651968, "v_te": 0.05940561175960147, "dir": "valor maior diminui evasao (monotonico)", "rep": "parcial (mesma direcao, nao signif. no teste)"}, {"var": "Ordem de opção", "grupo": "ingresso", "mi_tr": 0.009130012100528322, "mi_te": 0.007820730694954866, "v_tr": 0.11153961526350153, "v_te": 0.10286421332783054, "dir": "valor maior diminui evasao (monotonico)", "rep": "sim"}, {"var": "Deslocado", "grupo": "demografico", "mi_tr": 0.008482683058427476, "mi_te": 0.027973574761354807, "v_tr": 0.10847738350365606, "v_te": 0.19678091137834894, "dir": "deslocado=nao: aumenta evasao (vs sim)", "rep": "sim"}, {"var": "Estado civil", "grupo": "demografico", "mi_tr": 0.008364134978200134, "mi_te": 0.029323553158169743, "v_tr": 0.1090427152792631, "v_te": 0.20360412988333879, "dir": "depende da categoria", "rep": "parcial (alguns bins invertem)"}, {"var": "S2 sem avaliação", "grupo": "academico_s2", "mi_tr": 0.007307211963101858, "mi_te": 0.011568755729670388, "v_tr": 0.10207445351841836, "v_te": 0.12692788512434847, "dir": "valor maior aumenta evasao (monotonico)", "rep": "sim"}, {"var": "PIB (coorte)", "grupo": "macro", "mi_tr": 0.0061329254139908, "mi_te": 0.012236076792321351, "v_tr": 0.09150567616225284, "v_te": 0.12948061795476104, "dir": "depende da categoria", "rep": "parcial (mesma direcao, nao signif. no teste)"}, {"var": "Desemprego (coorte)", "grupo": "macro", "mi_tr": 0.0061329254139908, "mi_te": 0.012236076792321351, "v_tr": 0.09150567616225284, "v_te": 0.12948061795476104, "dir": "depende da categoria", "rep": "parcial (mesma direcao, nao signif. no teste)"}, {"var": "Inflação (coorte)", "grupo": "macro", "mi_tr": 0.0053302901372434775, "mi_te": 0.011967605627640602, "v_tr": 0.08527124219305908, "v_te": 0.12802187628335027, "dir": "depende da categoria", "rep": "parcial (mesma direcao, nao signif. no teste)"}, {"var": "Turno", "grupo": "ingresso", "mi_tr": 0.0050141128446829115, "mi_te": 0.005149348684245807, "v_tr": 0.08427889519245242, "v_te": 0.08546362013642796, "dir": "turno_diurno=noturno: aumenta evasao (vs diurno)", "rep": "sim"}, {"var": "S1 sem avaliação", "grupo": "academico_s1", "mi_tr": 0.0038837457398986086, "mi_te": 0.016609501785789474, "v_tr": 0.07438990790797664, "v_te": 0.15266865358683077, "dir": "valor maior aumenta evasao (monotonico)", "rep": "sim"}, {"var": "S1 creditadas", "grupo": "academico_s1", "mi_tr": 0.003471804716356849, "mi_te": 0.006754610829350947, "v_tr": 0.06843615632264703, "v_te": 0.09575542101627071, "dir": "nao monotonico (tendencia rho=-0.02); pico de risco em 1-4, minimo em 5+", "rep": "sim"}, {"var": "S2 creditadas", "grupo": "academico_s2", "mi_tr": 0.0019003657098414593, "mi_te": 0.001754653992049257, "v_tr": 0.050392927495133716, "v_te": 0.04914913637053415, "dir": "valor maior diminui evasao (monotonico)", "rep": "parcial (mesma direcao, nao signif. no teste)"}, {"var": "Nacionalidade", "grupo": "demografico", "mi_tr": 0.00010947728123699525, "mi_te": 0.0002154615208199615, "v_tr": 0.012241901890370336, "v_te": 0.017401474663447124, "dir": "sem efeito", "rep": "consistente (sem efeito nos dois)"}, {"var": "Internacional", "grupo": "demografico", "mi_tr": 0.00010947728123699525, "mi_te": 0.0002154615208199615, "v_tr": 0.012241901890370336, "v_te": 0.017401474663447124, "dir": "sem efeito", "rep": "consistente (sem efeito nos dois)"}, {"var": "Necess. especiais", "grupo": "demografico", "mi_tr": 2.5101254345784318e-05, "mi_te": 0.00010635899878091157, "v_tr": 0.005921893097342874, "v_te": 0.012227230707413916, "dir": "sem efeito", "rep": "consistente (sem efeito nos dois)"}], "test_table": [{"snap": "T0 · ingresso", "metodo": "Corte mínimo / fluxo máximo (Edmonds–Karp)", "kind": "ours", "acc": 0.7507, "bal_acc": 0.7632, "prec_dropout": 0.6419, "rec_dropout": 0.8204, "f1_dropout": 0.7202, "mcc": 0.5137, "auc": 0.8523, "tp": 233, "fp": 130, "fn": 51, "tn": 312, "ci": [0.7320923876603226, 0.7933966172853367]}, {"snap": "T0 · ingresso", "metodo": "Corte mínimo sem viés (λ = 0)", "kind": "graph", "acc": 0.7645, "bal_acc": 0.7361, "prec_dropout": 0.7446, "rec_dropout": 0.6056, "f1_dropout": 0.668, "mcc": 0.4947, "auc": null, "tp": 172, "fp": 59, "fn": 112, "tn": 383, "ci": [0.7016206159847412, 0.766044138912426]}, {"snap": "T0 · ingresso", "metodo": "Voto ponderado dos vizinhos (grafo kNN)", "kind": "graph", "acc": 0.7631, "bal_acc": 0.7614, "prec_dropout": 0.6772, "rec_dropout": 0.7535, "f1_dropout": 0.7133, "mcc": 0.5146, "auc": 0.8442, "tp": 214, "fp": 102, "fn": 70, "tn": 340, "ci": [0.7280736789665362, 0.7909354756231055]}, {"snap": "T0 · ingresso", "metodo": "Função harmônica (grafo kNN)", "kind": "graph", "acc": 0.759, "bal_acc": 0.7605, "prec_dropout": 0.6667, "rec_dropout": 0.7676, "f1_dropout": 0.7136, "mcc": 0.511, "auc": 0.8476, "tp": 218, "fp": 109, "fn": 66, "tn": 333, "ci": [0.7294496825361196, 0.7902288666927144]}, {"snap": "T0 · ingresso", "metodo": "Regra de 1 variável (do treino)", "kind": "base", "acc": 0.6928, "bal_acc": 0.664, "prec_dropout": 0.6266, "rec_dropout": 0.5317, "f1_dropout": 0.5752, "mcc": 0.34, "auc": null, "tp": 151, "fp": 90, "fn": 133, "tn": 352, "ci": [0.628950125361039, 0.6982841307573133]}, {"snap": "T0 · ingresso", "metodo": "Regressão logística (referência externa)", "kind": "ref", "acc": 0.7686, "bal_acc": 0.7678, "prec_dropout": 0.6824, "rec_dropout": 0.7641, "f1_dropout": 0.7209, "mcc": 0.5268, "auc": 0.8564, "tp": 217, "fp": 101, "fn": 67, "tn": 341, "ci": [0.7378865844560781, 0.798524343447114]}, {"snap": "T0 · ingresso", "metodo": "Classe majoritária (sempre 'forma')", "kind": "base", "acc": 0.6088, "bal_acc": 0.5, "prec_dropout": 0.0, "rec_dropout": 0.0, "f1_dropout": 0.0, "mcc": 0.0, "auc": null, "tp": 0, "fp": 0, "fn": 284, "tn": 442, "ci": [0.5, 0.5]}, {"snap": "T0 · ingresso", "metodo": "Corte mínimo só com variáveis essenciais (8 var.)", "kind": "graph", "acc": 0.7273, "bal_acc": 0.7401, "prec_dropout": 0.6168, "rec_dropout": 0.7993, "f1_dropout": 0.6963, "mcc": 0.4688, "auc": 0.8419, "tp": 227, "fp": 141, "fn": 57, "tn": 301, "ci": [0.7073825890495011, 0.7717200894060011]}, {"snap": "T0 · ingresso", "metodo": "Caminho no DAG de trajetórias", "kind": "graph", "acc": 0.7204, "bal_acc": 0.7156, "prec_dropout": 0.6294, "rec_dropout": 0.6937, "f1_dropout": 0.66, "mcc": 0.4249, "auc": 0.7885, "tp": 197, "fp": 116, "fn": 87, "tn": 326, "ci": [0.6828, 0.7486]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Corte mínimo / fluxo máximo (Edmonds–Karp)", "kind": "ours", "acc": 0.8499, "bal_acc": 0.8471, "prec_dropout": 0.7926, "rec_dropout": 0.8345, "f1_dropout": 0.813, "mcc": 0.6884, "auc": 0.9371, "tp": 237, "fp": 62, "fn": 47, "tn": 380, "ci": [0.8200044332383228, 0.8731348274166267]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Corte mínimo sem viés (λ = 0)", "kind": "graph", "acc": 0.8733, "bal_acc": 0.8538, "prec_dropout": 0.8967, "rec_dropout": 0.7641, "f1_dropout": 0.8251, "mcc": 0.7325, "auc": null, "tp": 217, "fp": 25, "fn": 67, "tn": 417, "ci": [0.8256151291518389, 0.8802207862188799]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Voto ponderado dos vizinhos (grafo kNN)", "kind": "graph", "acc": 0.8595, "bal_acc": 0.8538, "prec_dropout": 0.816, "rec_dropout": 0.8275, "f1_dropout": 0.8217, "mcc": 0.7058, "auc": 0.9368, "tp": 235, "fp": 53, "fn": 49, "tn": 389, "ci": [0.8265613467899524, 0.8807255192043288]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Função harmônica (grafo kNN)", "kind": "graph", "acc": 0.8526, "bal_acc": 0.845, "prec_dropout": 0.8127, "rec_dropout": 0.8099, "f1_dropout": 0.8113, "mcc": 0.6904, "auc": 0.9354, "tp": 230, "fp": 53, "fn": 54, "tn": 389, "ci": [0.8182142857142858, 0.8716811715686597]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Regra de 1 variável (do treino)", "kind": "base", "acc": 0.832, "bal_acc": 0.8249, "prec_dropout": 0.7812, "rec_dropout": 0.7923, "f1_dropout": 0.7867, "mcc": 0.6481, "auc": null, "tp": 225, "fp": 63, "fn": 59, "tn": 379, "ci": [0.7980234335311064, 0.8514354247830885]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Regressão logística (referência externa)", "kind": "ref", "acc": 0.8829, "bal_acc": 0.8837, "prec_dropout": 0.8262, "rec_dropout": 0.8873, "f1_dropout": 0.8557, "mcc": 0.7588, "auc": 0.9505, "tp": 252, "fp": 53, "fn": 32, "tn": 389, "ci": [0.860037698150916, 0.9057817037774909]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Classe majoritária (sempre 'forma')", "kind": "base", "acc": 0.6088, "bal_acc": 0.5, "prec_dropout": 0.0, "rec_dropout": 0.0, "f1_dropout": 0.0, "mcc": 0.0, "auc": null, "tp": 0, "fp": 0, "fn": 284, "tn": 442, "ci": [0.5, 0.5]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Corte mínimo só com variáveis essenciais (3 var.)", "kind": "graph", "acc": 0.8581, "bal_acc": 0.8577, "prec_dropout": 0.7967, "rec_dropout": 0.8556, "f1_dropout": 0.8251, "mcc": 0.7073, "auc": 0.9056, "tp": 243, "fp": 62, "fn": 41, "tn": 380, "ci": [0.8316285284350353, 0.8826284046855791]}, {"snap": "T1 · fim do 1º semestre", "metodo": "Caminho no DAG de trajetórias", "kind": "graph", "acc": 0.8196, "bal_acc": 0.8159, "prec_dropout": 0.7542, "rec_dropout": 0.7993, "f1_dropout": 0.7761, "mcc": 0.6259, "auc": 0.9036, "tp": 227, "fp": 74, "fn": 57, "tn": 368, "ci": [0.785, 0.8439]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Corte mínimo / fluxo máximo (Edmonds–Karp)", "kind": "ours", "acc": 0.9036, "bal_acc": 0.8988, "prec_dropout": 0.8768, "rec_dropout": 0.8768, "f1_dropout": 0.8768, "mcc": 0.7976, "auc": 0.9651, "tp": 249, "fp": 35, "fn": 35, "tn": 407, "ci": [0.8742052714787284, 0.9217546191933147]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Corte mínimo sem viés (λ = 0)", "kind": "graph", "acc": 0.916, "bal_acc": 0.9027, "prec_dropout": 0.9373, "rec_dropout": 0.8415, "f1_dropout": 0.8868, "mcc": 0.8233, "auc": null, "tp": 239, "fp": 16, "fn": 45, "tn": 426, "ci": [0.8781738938867832, 0.9245317604508413]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Voto ponderado dos vizinhos (grafo kNN)", "kind": "graph", "acc": 0.9132, "bal_acc": 0.9054, "prec_dropout": 0.9048, "rec_dropout": 0.8697, "f1_dropout": 0.8869, "mcc": 0.817, "auc": 0.9694, "tp": 247, "fp": 26, "fn": 37, "tn": 416, "ci": [0.8818434192788537, 0.9266124849765273]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Função harmônica (grafo kNN)", "kind": "graph", "acc": 0.916, "bal_acc": 0.9065, "prec_dropout": 0.9176, "rec_dropout": 0.8627, "f1_dropout": 0.8893, "mcc": 0.8227, "auc": 0.9686, "tp": 245, "fp": 22, "fn": 39, "tn": 420, "ci": [0.8815938056191204, 0.928977929728359]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Regra de 1 variável (do treino)", "kind": "base", "acc": 0.8609, "bal_acc": 0.8599, "prec_dropout": 0.802, "rec_dropout": 0.8556, "f1_dropout": 0.8279, "mcc": 0.7124, "auc": null, "tp": 243, "fp": 60, "fn": 41, "tn": 382, "ci": [0.8323985322133407, 0.88581086259072]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Regressão logística (referência externa)", "kind": "ref", "acc": 0.9229, "bal_acc": 0.9241, "prec_dropout": 0.88, "rec_dropout": 0.9296, "f1_dropout": 0.9041, "mcc": 0.8406, "auc": 0.9748, "tp": 264, "fp": 36, "fn": 20, "tn": 406, "ci": [0.9028536834660086, 0.9439213271426377]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Classe majoritária (sempre 'forma')", "kind": "base", "acc": 0.6088, "bal_acc": 0.5, "prec_dropout": 0.0, "rec_dropout": 0.0, "f1_dropout": 0.0, "mcc": 0.0, "auc": null, "tp": 0, "fp": 0, "fn": 284, "tn": 442, "ci": [0.5, 0.5]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Corte mínimo só com variáveis essenciais (7 var.)", "kind": "graph", "acc": 0.8912, "bal_acc": 0.893, "prec_dropout": 0.8339, "rec_dropout": 0.9014, "f1_dropout": 0.8663, "mcc": 0.7765, "auc": 0.958, "tp": 256, "fp": 51, "fn": 28, "tn": 391, "ci": [0.8696184873848779, 0.9151143619105645]}, {"snap": "T2 · fim do 2º semestre", "metodo": "Caminho no DAG de trajetórias", "kind": "graph", "acc": 0.8499, "bal_acc": 0.849, "prec_dropout": 0.7869, "rec_dropout": 0.8451, "f1_dropout": 0.8149, "mcc": 0.6901, "auc": 0.924, "tp": 240, "fp": 65, "fn": 44, "tn": 377, "ci": [0.8222, 0.8746]}], "syn": [{"a": "Devedor", "b": "Gênero masculino", "n": 128, "rate": 0.8828125, "syn": 0.12293408054711241, "n_te": 43, "rate_te": 0.8372093023255814, "syn_te": 0.0991140642303433, "rep": true}, {"a": "Idade ingresso ≥ 23", "b": "Gênero masculino", "n": 440, "rate": 0.7272727272727273, "syn": 0.10426953238454839, "n_te": 117, "rate_te": 0.7008547008547008, "syn_te": 0.05671055671055669, "rep": true}, {"a": "Gênero masculino", "b": "Ingresso 'maiores de 23'", "n": 266, "rate": 0.7518796992481203, "syn": 0.10318081448975591, "n_te": 71, "rate_te": 0.7323943661971831, "syn_te": 0.049854683657500565, "rep": true}, {"a": "Devedor", "b": "Ingresso 'maiores de 23'", "n": 104, "rate": 0.8557692307692307, "syn": 0.09589081131634314, "n_te": 27, "rate_te": 1.0, "syn_te": 0.26190476190476186, "rep": true}, {"a": "Devedor", "b": "Idade ingresso ≥ 23", "n": 164, "rate": 0.8536585365853658, "syn": 0.09378011713247825, "n_te": 41, "rate_te": 0.926829268292683, "syn_te": 0.18873403019744484, "rep": true}, {"a": "Curso noturno", "b": "Aprovação S1 < 50%", "n": 102, "rate": 1.0, "syn": 0.0894428152492669, "n_te": 28, "rate_te": 0.9642857142857143, "syn_te": 0.0759608411892676, "rep": true}, {"a": "Idade ingresso ≥ 23", "b": "Curso noturno", "n": 300, "rate": 0.53, "syn": -0.09300319488817888, "n_te": 70, "rate_te": 0.5428571428571428, "syn_te": -0.1012870012870013, "rep": true}, {"a": "Ingresso 'maiores de 23'", "b": "Curso noturno", "n": 181, "rate": 0.56353591160221, "syn": -0.0851629731561544, "n_te": 44, "rate_te": 0.5227272727272727, "syn_te": -0.15981240981240985, "rep": true}, {"a": "Curso noturno", "b": "Não deslocado", "n": 265, "rate": 0.4830188679245283, "syn": -0.023005228461013827, "n_te": 58, "rate_te": 0.5, "syn_te": -0.013157894736842146, "rep": true}, {"a": "Devedor", "b": "Não deslocado", "n": 185, "rate": 0.7405405405405405, "syn": -0.019337878912347062, "n_te": 55, "rate_te": 0.7636363636363637, "syn_te": 0.02554112554112553, "rep": false}], "strat": [{"fator": "Bolsista", "estrato": "mensalidade em dia", "com": 0.11473272490221642, "n_com": 767, "sem": 0.3928164196123147, "n_sem": 1754, "com_te": 0.10909090909090909, "sem_te": 0.36899563318777295}, {"fator": "Bolsista", "estrato": "mensalidade atrasada", "com": 0.7142857142857143, "n_com": 28, "sem": 0.9577464788732394, "n_sem": 355, "com_te": 0.8888888888888888, "sem_te": 0.9468085106382979}, {"fator": "Devedor", "estrato": "mensalidade em dia", "com": 0.5174825174825175, "n_com": 143, "sem": 0.2956265769554247, "n_sem": 2378, "com_te": 0.5227272727272727, "sem_te": 0.28324697754749567}, {"fator": "Devedor", "estrato": "mensalidade atrasada", "com": 0.946236559139785, "n_com": 186, "sem": 0.934010152284264, "n_sem": 197, "com_te": 0.975, "sem_te": 0.9206349206349206}, {"fator": "Idade≥23", "estrato": "aprovou ≥50% no S1", "com": 0.384070796460177, "n_com": 565, "sem": 0.18044659022329512, "n_sem": 1657, "com_te": 0.3709677419354839, "sem_te": 0.15555555555555556}, {"fator": "Idade≥23", "estrato": "aprovou <50% no S1", "com": 0.983957219251337, "n_com": 374, "sem": 0.8214285714285714, "n_sem": 308, "com_te": 0.9897959183673469, "sem_te": 0.7878787878787878}, {"fator": "Masculino", "estrato": "aprovou ≥50% no S1", "com": 0.3643926788685524, "n_com": 601, "sem": 0.18322023442319557, "n_sem": 1621, "com_te": 0.3107344632768362, "sem_te": 0.1534090909090909}, {"fator": "Masculino", "estrato": "aprovou <50% no S1", "com": 0.9111111111111111, "n_com": 360, "sem": 0.9099378881987578, "n_sem": 322, "com_te": 0.8918918918918919, "sem_te": 0.8837209302325582}, {"fator": "Noturno", "estrato": "idade ≥23", "com": 0.53, "n_com": 300, "sem": 0.6666666666666666, "n_sem": 639, "com_te": 0.5428571428571428, "sem_te": 0.6907894736842105}, {"fator": "Noturno", "estrato": "idade <23", "com": 0.28125, "n_com": 32, "sem": 0.280910501810657, "n_sem": 1933, "com_te": 0.16666666666666666, "sem_te": 0.28112449799196787}], "flag_eff": [{"flag": "Mensalidade atrasada", "n_edges": 9, "delta_tr": 0.2346011503307082, "delta_te": 0.2638977556686844, "frac_pos_tr": 0.8888888888888888}, {"flag": "Devedor", "n_edges": 10, "delta_tr": 0.08636348159460887, "delta_te": 0.09568453514374034, "frac_pos_tr": 0.6}, {"flag": "Sem bolsa", "n_edges": 5, "delta_tr": 0.09454319243059563, "delta_te": 0.1343397929979126, "frac_pos_tr": 1.0}, {"flag": "Idade ingresso ≥ 23", "n_edges": 12, "delta_tr": 0.10817927604839936, "delta_te": 0.11411277203120575, "frac_pos_tr": 0.8333333333333334}, {"flag": "Aprovação S1 < 50%", "n_edges": 5, "delta_tr": -0.04528884856243795, "delta_te": -0.08620689655172414, "frac_pos_tr": 0.2}, {"flag": "Aprovação S2 < 50%", "n_edges": 5, "delta_tr": 0.5200679963651333, "delta_te": 0.7278706435048617, "frac_pos_tr": 0.8}], "iv": [{"frm": "SB + ID + S1 + S2", "to": "ID", "steps": "tirar S1 → tirar S2 → tirar SB", "cost": 3, "n": 189, "r_from": 0.9788359788359788, "r_to": 0.08108108108108109, "r_from_te": 1.0, "r_to_te": 0.0}, {"frm": "SB + S1 + S2", "to": "SB", "steps": "tirar S1 → tirar S2", "cost": 2, "n": 181, "r_from": 0.8232044198895028, "r_to": 0.12945368171021376, "r_from_te": 0.8275862068965517, "r_to_te": 0.09734513274336283}, {"frm": "MA + SB + ID + S1 + S2", "to": "ID", "steps": "tirar S1 → tirar S2 → tirar MA → tirar SB", "cost": 4, "n": 76, "r_from": 1.0, "r_to": 0.08108108108108109, "r_from_te": 1.0, "r_to_te": 0.0}, {"frm": "MA + DV + SB + ID + S1 + S2", "to": "ID", "steps": "tirar S1 → tirar S2 → tirar DV → tirar MA → tirar SB", "cost": 5, "n": 65, "r_from": 1.0, "r_to": 0.08108108108108109, "r_from_te": 1.0, "r_to_te": 0.0}, {"frm": "SB + S2", "to": "SB", "steps": "tirar S2", "cost": 1, "n": 50, "r_from": 1.0, "r_to": 0.12945368171021376, "r_from_te": 1.0, "r_to_te": 0.09734513274336283}, {"frm": "MA + SB + S1 + S2", "to": "SB", "steps": "tirar MA → tirar S1 → tirar S2", "cost": 3, "n": 45, "r_from": 0.9777777777777777, "r_to": 0.12945368171021376, "r_from_te": 1.0, "r_to_te": 0.09734513274336283}, {"frm": "SB + ID + S2", "to": "ID", "steps": "tirar S2 → tirar SB", "cost": 2, "n": 36, "r_from": 0.8888888888888888, "r_to": 0.08108108108108109, "r_from_te": 1.0, "r_to_te": 0.0}, {"frm": "MA + DV + SB + ID", "to": "ID", "steps": "tirar DV → tirar MA → tirar SB", "cost": 3, "n": 28, "r_from": 0.8928571428571429, "r_to": 0.08108108108108109, "r_from_te": 1.0, "r_to_te": 0.0}]};</script>
+<script>/* Mini biblioteca de gráficos SVG (vanilla, sem dependências). Todos os rótulos via textContent. */
+const NS = "http://www.w3.org/2000/svg";
+function S(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  if (attrs) for (const k in attrs) { if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]); }
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function T(parent, x, y, txt, attrs) { const t = S("text", Object.assign({ x, y }, attrs || {}), parent); t.textContent = txt; return t; }
+function H(tag, attrs, parent, txt) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (txt !== undefined) e.textContent = txt;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const fmtPct = (v, d = 1) => (v == null || isNaN(v)) ? "–" : (v * 100).toFixed(d).replace(".", ",") + "%";
+const fmtNum = (v, d = 3) => (v == null || isNaN(v)) ? "–" : Number(v).toFixed(d).replace(".", ",");
+const fmtX = (v) => (v == null || isNaN(v)) ? "–" : "×" + Number(v).toFixed(2).replace(".", ",");
+const fmtPP = (v, d = 1) => (v == null || isNaN(v)) ? "–" : ((v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(d).replace(".", ",") + " p.p.");
+
+/* ---------- tooltip singleton ---------- */
+const Tip = (() => {
+  let el;
+  function ensure() { if (!el) { el = H("div", { class: "tip", role: "tooltip" }, document.body); } return el; }
+  return {
+    show(evt, rows) { // rows: [{v, l, key?}] value-first
+      const t = ensure(); t.replaceChildren();
+      rows.forEach((r, i) => {
+        const d = H("div", { class: i === 0 ? "" : "row" }, t);
+        if (i === 0) { H("div", { class: "tv" }, d, r.v); if (r.l) H("div", { class: "tl" }, d, r.l); }
+        else { H("span", { class: "tl" }, d, r.l); H("span", { style: "font-weight:600;font-variant-numeric:tabular-nums" }, d, r.v); }
+      });
+      t.style.opacity = 1; this.move(evt);
+    },
+    move(evt) {
+      if (!el) return; const pad = 14; let x = evt.clientX + pad, y = evt.clientY + pad;
+      const r = el.getBoundingClientRect();
+      if (x + r.width > innerWidth - 8) x = evt.clientX - r.width - pad;
+      if (y + r.height > innerHeight - 8) y = evt.clientY - r.height - pad;
+      el.style.left = x + "px"; el.style.top = y + "px";
+    },
+    hide() { if (el) el.style.opacity = 0; }
+  };
+})();
+function bindTip(node, rowsFn) {
+  node.setAttribute("tabindex", "0");
+  node.addEventListener("pointermove", e => Tip.show(e, rowsFn()));
+  node.addEventListener("pointerleave", () => Tip.hide());
+  node.addEventListener("focus", () => { const b = node.getBoundingClientRect(); Tip.show({ clientX: b.right, clientY: b.top }, rowsFn()); });
+  node.addEventListener("blur", () => Tip.hide());
+}
+
+/* ---------- table-view twin ---------- */
+function tableToggle(host, columns, rows, label) {
+  const bar = H("div", { style: "margin-top:6px" }, host);
+  const btn = H("button", { class: "btn", "aria-pressed": "false" }, bar, label || "Ver tabela");
+  const wrap = H("div", { class: "tablewrap", style: "display:none;margin-top:8px" }, host);
+  const tb = H("table", { class: "t" }, wrap);
+  const thr = H("tr", null, H("thead", null, tb));
+  columns.forEach(c => H("th", { class: c.num ? "num" : "" }, thr, c.h));
+  const body = H("tbody", null, tb);
+  rows.forEach(r => { const tr = H("tr", null, body); columns.forEach(c => H("td", { class: c.num ? "num" : "" }, tr, c.f ? c.f(r) : (r[c.k] ?? "–"))); });
+  btn.addEventListener("click", () => { const on = wrap.style.display === "none"; wrap.style.display = on ? "block" : "none"; btn.setAttribute("aria-pressed", on); btn.textContent = on ? "Ocultar tabela" : (label || "Ver tabela"); });
+}
+function legend(host, items) { // items: [{type:'sw'|'ln'|'dt', color, label}]
+  const l = H("div", { class: "legend" }, host);
+  items.forEach(it => { const k = H("span", { class: "k" }, l); H("span", { class: it.type || "sw", style: `background:${it.color}` }, k); H("span", null, k, it.label); });
+  return l;
+}
+function riskColor(rate, base) { // diverging blue <-> gray <-> red, centered on base rate
+  if (rate == null || isNaN(rate)) return "var(--neutral)";
+  if (rate >= base) { const p = Math.min(1, (rate - base) / (1 - base)); return `color-mix(in oklab, var(--up) ${Math.round(18 + 82 * p)}%, var(--mid))`; }
+  const p = Math.min(1, (base - rate) / base); return `color-mix(in oklab, var(--down) ${Math.round(18 + 82 * p)}%, var(--mid))`;
+}
+
+/* ---------- 1. Diverging lift bars (train bar + test dot) ---------- */
+function divergingLift(host, rows, opt = {}) {
+  const W = 760, rowH = 24, padL = opt.padL || 300, padR = 70, top = 26, bottom = 30;
+  const Hh = top + rows.length * rowH + bottom;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Gráfico de barras divergentes" }, host);
+  const lo = Math.log2(opt.min || 0.125), hi = Math.log2(opt.max || 8);
+  const x = v => padL + (Math.min(hi, Math.max(lo, Math.log2(Math.max(v, 1e-6)))) - lo) / (hi - lo) * (W - padL - padR);
+  const ticks = opt.ticks || [0.125, 0.25, 0.5, 1, 2, 4, 8];
+  ticks.forEach(t => {
+    S("line", { x1: x(t), x2: x(t), y1: top - 6, y2: Hh - bottom, class: t === 1 ? "baseline" : "gridline" }, svg);
+    const g = S("g", { class: "tick" }, svg); T(g, x(t), Hh - bottom + 16, "×" + String(t).replace(".", ","), { "text-anchor": "middle" });
+  });
+  T(svg, x(1), 12, "sem efeito (×1 = taxa média)", { "text-anchor": "middle", style: "font-size:11px" });
+  T(svg, x(ticks[0]) + 2, 12, "← diminui evasão", { "text-anchor": "start", style: "font-size:11px" });
+  T(svg, x(ticks[ticks.length - 1]) - 2, 12, "aumenta evasão →", { "text-anchor": "end", style: "font-size:11px" });
+  rows.forEach((r, i) => {
+    const y = top + i * rowH, cy = y + rowH / 2;
+    const v = r.lift_train, x0 = x(1), x1 = x(v);
+    const up = v >= 1, w = Math.max(1, Math.abs(x1 - x0)), bh = 12;
+    const g = S("g", {}, svg);
+    T(g, padL - 10, cy + 4, r.label, { "text-anchor": "end", class: r.strong ? "lbl-strong" : "" });
+    // bar: square at baseline, 4px rounded data-end
+    const bx = up ? x0 : x1;
+    const path = roundedHBar(bx, cy - bh / 2, w, bh, up ? "right" : "left", 4);
+    S("path", { d: path, fill: up ? "var(--up)" : "var(--down)", class: "mark" }, g);
+    if (r.lift_test != null && !isNaN(r.lift_test)) {
+      S("circle", { cx: x(r.lift_test), cy, r: 4.5, fill: "var(--text-primary)", stroke: "var(--surface-1)", "stroke-width": 2 }, g);
+    }
+    const lx = up ? Math.max(x1, r.lift_test ? x(r.lift_test) : 0) + 8 : Math.max(x0, r.lift_test ? x(r.lift_test) : 0) + 8;
+    T(g, lx, cy + 4, fmtX(v), { "text-anchor": "start", style: "font-variant-numeric:tabular-nums" });
+    const hit = S("rect", { x: padL - 290, y, width: W - padL + 290 - 4, height: rowH, class: "hit" }, g);
+    bindTip(hit, () => [
+      { v: `${fmtPct(r.rate_train)} evadem (treino)`, l: r.label },
+      { l: "Lift treino (80%)", v: fmtX(r.lift_train) },
+      { l: "Lift teste (20%)", v: fmtX(r.lift_test) },
+      { l: "Taxa de evasão teste", v: fmtPct(r.rate_test) },
+      { l: "n treino / n teste", v: `${r.n_train ?? "–"} / ${r.n_test ?? "–"}` },
+      ...(r.extra || [])
+    ]);
+  });
+  return svg;
+}
+function roundedHBar(x, y, w, h, roundSide, r) {
+  r = Math.min(r, w, h / 2);
+  if (roundSide === "right") return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+  return `M${x + w},${y}H${x + r}Q${x},${y} ${x},${y + r}V${y + h - r}Q${x},${y + h} ${x + r},${y + h}H${x + w}Z`;
+}
+
+/* ---------- 2. Delta bars with error whiskers (ablation) ---------- */
+function deltaBars(host, rows, opt = {}) {
+  const W = 760, rowH = 22, padL = opt.padL || 290, padR = 80, top = 24, bottom = 30;
+  const Hh = top + rows.length * rowH + bottom;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Ablação" }, host);
+  const ext = opt.ext || Math.max(0.01, ...rows.map(r => Math.abs(r.mean) + (r.sd || 0))) * 1.08;
+  const x = v => padL + (v + ext) / (2 * ext) * (W - padL - padR);
+  const step = opt.step || niceStep(ext);
+  for (let t = -Math.floor(ext / step) * step; t <= ext + 1e-9; t += step) {
+    S("line", { x1: x(t), x2: x(t), y1: top - 4, y2: Hh - bottom, class: Math.abs(t) < 1e-9 ? "baseline" : "gridline" }, svg);
+    const g = S("g", { class: "tick" }, svg); T(g, x(t), Hh - bottom + 16, (t > 0 ? "+" : t < 0 ? "−" : "") + Math.abs(t * 100).toFixed(step * 100 < 1 ? 1 : 0).replace(".", ","), { "text-anchor": "middle" });
+  }
+  T(svg, x(-ext) + 2, 12, opt.leftLabel || "← piora ao remover (variável ajuda)", { style: "font-size:11px" });
+  T(svg, x(ext) - 2, 12, opt.rightLabel || "melhora ao remover →", { "text-anchor": "end", style: "font-size:11px" });
+  const col = { essencial: "var(--s1)", neutra: "var(--neutral)", prejudicial: "var(--s2)" };
+  rows.forEach((r, i) => {
+    const y = top + i * rowH, cy = y + rowH / 2, g = S("g", {}, svg);
+    T(g, padL - 10, cy + 4, r.label, { "text-anchor": "end" });
+    const x0 = x(0), x1 = x(r.mean), w = Math.max(1, Math.abs(x1 - x0));
+    S("path", { d: roundedHBar(r.mean >= 0 ? x0 : x1, cy - 6, w, 12, r.mean >= 0 ? "right" : "left", 4), fill: col[r.cls] || "var(--neutral)", class: "mark" }, g);
+    if (r.sd) { S("line", { x1: x(r.mean - r.sd), x2: x(r.mean + r.sd), y1: cy, y2: cy, stroke: "var(--text-secondary)", "stroke-width": 1.2 }, g);
+      [r.mean - r.sd, r.mean + r.sd].forEach(v => S("line", { x1: x(v), x2: x(v), y1: cy - 4, y2: cy + 4, stroke: "var(--text-secondary)", "stroke-width": 1.2 }, g)); }
+    T(g, x(Math.max(r.mean + (r.sd || 0), 0)) + 6, cy + 4, fmtPP(r.mean), { style: "font-variant-numeric:tabular-nums" });
+    const hit = S("rect", { x: 0, y, width: W, height: rowH, class: "hit" }, g);
+    bindTip(hit, () => [{ v: fmtPP(r.mean, 2), l: `${opt.what || "Δ bal_acc ao remover"}: ${r.label}` }, { l: "desvio-padrão (5 dobras)", v: fmtPP(r.sd || 0, 2).replace("+", "±") }, { l: "classificação", v: r.cls }, ...(r.extra || [])]);
+  });
+  return svg;
+}
+function niceStep(ext) { const raw = ext / 3; const p = Math.pow(10, Math.floor(Math.log10(raw))); const m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
+
+/* ---------- 3. Dot + CI rows (model comparison), small multiples by panel ---------- */
+function dotCI(host, panels, opt = {}) {
+  // panels: [{title, rows:[{label, v, lo, hi, kind:'ours'|'base'|'ref'|'graph'}]}]
+  const W = 760, rowH = 24, padL = opt.padL || 250, padR = 60, xmin = opt.xmin ?? 0.4, xmax = opt.xmax ?? 1;
+  const x = v => padL + (v - xmin) / (xmax - xmin) * (W - padL - padR);
+  let total = 0; panels.forEach(p => total += 26 + p.rows.length * rowH + 6);
+  const Hh = total + 30;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Comparação de métodos" }, host);
+  const ticks = []; for (let t = xmin; t <= xmax + 1e-9; t += opt.step || 0.1) ticks.push(+t.toFixed(3));
+  ticks.forEach(t => { S("line", { x1: x(t), x2: x(t), y1: 0, y2: Hh - 30, class: "gridline" }, svg); const g = S("g", { class: "tick" }, svg); T(g, x(t), Hh - 12, fmtNum(t, 1), { "text-anchor": "middle" }); });
+  if (opt.ref != null) { S("line", { x1: x(opt.ref), x2: x(opt.ref), y1: 0, y2: Hh - 30, class: "baseline" }, svg); }
+  const col = { ours: "var(--s1)", graph: "var(--text-secondary)", base: "var(--neutral)", ref: "var(--s2)" };
+  let y0 = 0;
+  panels.forEach(p => {
+    T(svg, 0, y0 + 17, p.title, { class: "lbl-strong", style: "font-size:12.5px" });
+    y0 += 26;
+    p.rows.forEach(r => {
+      const cy = y0 + rowH / 2, g = S("g", {}, svg);
+      T(g, padL - 10, cy + 4, r.label, { "text-anchor": "end", class: r.kind === "ours" ? "lbl-strong" : "" });
+      if (r.lo != null) S("line", { x1: x(r.lo), x2: x(r.hi), y1: cy, y2: cy, stroke: col[r.kind] || "var(--neutral)", "stroke-width": 2, "stroke-linecap": "round" }, g);
+      const c = S("circle", { cx: x(r.v), cy, r: 5, fill: r.kind === "ref" ? "var(--surface-1)" : (col[r.kind] || "var(--neutral)"), stroke: r.kind === "ref" ? col.ref : "var(--surface-1)", "stroke-width": 2, class: "mark" }, g);
+      T(g, x(r.hi ?? r.v) + 8, cy + 4, fmtNum(r.v, 3), { style: "font-variant-numeric:tabular-nums" });
+      const hit = S("rect", { x: 0, y: y0, width: W, height: rowH, class: "hit" }, g);
+      bindTip(hit, () => [{ v: fmtNum(r.v, 3), l: `${opt.metric || "métrica"} — ${r.label} (${p.title})` }, ...(r.lo != null ? [{ l: "IC 95% (bootstrap)", v: `${fmtNum(r.lo, 3)} – ${fmtNum(r.hi, 3)}` }] : []), ...(r.extra || [])]);
+      y0 += rowH;
+    });
+    y0 += 6;
+  });
+  return svg;
+}
+
+/* ---------- 4. Tidy tree (Chow-Liu) ---------- */
+function treeGraph(host, nodes, edges, opt = {}) {
+  // nodes: [{id,label,mi_target,group}], edges: [{u,v,mi,stab}]
+  const root = opt.root || "Target";
+  const adj = {}; nodes.forEach(n => adj[n.id] = []);
+  edges.forEach(e => { if (adj[e.u] && adj[e.v]) { adj[e.u].push(e); adj[e.v].push(e); } });
+  const depth = {}, parent = {}, kids = {}; depth[root] = 0; const q = [root]; const order = [];
+  while (q.length) { const u = q.shift(); order.push(u); kids[u] = [];
+    adj[u].sort((a, b) => b.mi - a.mi).forEach(e => { const v = e.u === u ? e.v : e.u; if (depth[v] === undefined) { depth[v] = depth[u] + 1; parent[v] = { id: u, e }; kids[u].push(v); q.push(v); } }); }
+  const ys = {}; let leaf = 0;
+  (function place(u) { if (!kids[u].length) { ys[u] = leaf++; return; } kids[u].forEach(place); ys[u] = (ys[kids[u][0]] + ys[kids[u][kids[u].length - 1]]) / 2; })(root);
+  const maxD = Math.max(...Object.values(depth));
+  const rowH = 22, padT = 16, colW = opt.colW || 170, padL = 40;
+  const W = Math.max(760, padL + maxD * colW + 160), Hh = padT * 2 + leaf * rowH;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Árvore de dependências" }, host);
+  const px = u => padL + depth[u] * colW, py = u => padT + ys[u] * rowH + 6;
+  const maxMI = Math.max(...edges.map(e => e.mi));
+  const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+  order.forEach(u => { if (!parent[u]) return; const p = parent[u].id, e = parent[u].e;
+    const lw = p === root ? 0 : Math.min(colW - 20, 10 + 5.6 * String((nodeById[p] || { label: p }).label).length);
+    const x1 = px(p) + lw, y1 = py(p), x2 = px(u) - 6, y2 = py(u), mx = (x1 + x2) / 2;
+    const path = S("path", { d: `M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}`, fill: "none", stroke: p === root ? "var(--up)" : "var(--axis)", "stroke-width": 1 + 5 * Math.sqrt(e.mi / maxMI), "stroke-linecap": "round", "stroke-opacity": e.stab != null ? 0.35 + 0.65 * e.stab : 1 }, svg);
+    const hp = S("path", { d: path.getAttribute("d"), fill: "none", stroke: "transparent", "stroke-width": 12 }, svg);
+    bindTip(hp, () => [{ v: `IM = ${fmtNum(e.mi, 4)} bits`, l: `${nodeById[p]?.label || p} — ${nodeById[u]?.label || u}` }, ...(e.stab != null ? [{ l: "estabilidade (bootstrap)", v: fmtPct(e.stab, 0) }] : []), ...(e.in_test != null ? [{ l: "aparece na árvore do teste", v: e.in_test ? "sim" : "não" }] : [])]);
+  });
+  order.forEach(u => { const n = nodeById[u] || { label: u }; const g = S("g", {}, svg);
+    const isRoot = u === root;
+    S("circle", { cx: px(u), cy: py(u), r: isRoot ? 8 : 5.5, fill: isRoot ? "var(--up)" : (n.color || "var(--s1)"), stroke: "var(--surface-1)", "stroke-width": 2 }, g);
+    T(g, px(u) + (isRoot ? 12 : 9), py(u) + 4, n.label, { class: isRoot || depth[u] === 1 ? "lbl-strong" : "" });
+    const hit = S("rect", { x: px(u) - 8, y: py(u) - 10, width: Math.min(colW - 6, 8 + 6.3 * String(n.label).length), height: 20, class: "hit" }, g);
+    bindTip(hit, () => [{ v: n.label, l: n.group ? `grupo: ${n.group}` : "" }, ...(n.mi_target != null ? [{ l: "IM direta com Desfecho", v: `${fmtNum(n.mi_target, 4)} bits` }] : []), { l: "profundidade a partir do Desfecho", v: String(depth[u]) }]);
+  });
+  return svg;
+}
+
+/* ---------- 5. Layered DAG / Sankey (trajectories) ---------- */
+function sankey(host, layers, links, opt = {}) {
+  // layers: [{title, nodes:[{id,label,n,rate}]}]; links: [{s,t,n,rate}]
+  const W = 980, Hh = opt.height || 470, top = 34, bottom = 12, nodeW = 14, gap = 10;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Fluxo de trajetórias" }, host);
+  const base = opt.base ?? 0.3915;
+  const colX = i => 120 + i * ((W - 260) / (layers.length - 1));
+  const pos = {};
+  layers.forEach((L, i) => {
+    const tot = L.nodes.reduce((a, n) => a + n.n, 0);
+    const avail = Hh - top - bottom - gap * (L.nodes.length - 1);
+    let y = top; const k = avail / tot;
+    L.nodes.forEach(n => { pos[n.id] = { x: colX(i), y, h: Math.max(2, n.n * k), k, outY: y, inY: y, n, layer: i }; y += n.n * k + gap; });
+    T(svg, colX(i) + nodeW / 2, 14, L.title, { "text-anchor": "middle", class: "lbl-strong", style: "font-size:12px" });
+  });
+  const ls = links.slice().sort((a, b) => (pos[a.s].y - pos[b.s].y) || (pos[a.t].y - pos[b.t].y));
+  ls.forEach(l => {
+    const a = pos[l.s], b = pos[l.t]; if (!a || !b) return;
+    const h = l.n * a.k; const y0 = a.outY, y1 = b.inY; a.outY += h; b.inY += l.n * b.k;
+    const x0 = a.x + nodeW, x1 = b.x, mx = (x0 + x1) / 2, h1 = l.n * b.k;
+    const d = `M${x0},${y0}C${mx},${y0} ${mx},${y1} ${x1},${y1}V${y1 + h1}C${mx},${y1 + h1} ${mx},${y0 + h} ${x0},${y0 + h}Z`;
+    const p = S("path", { d, fill: riskColor(l.rate, base), "fill-opacity": 0.55, class: "mark" }, svg);
+    bindTip(p, () => [{ v: `${fmtPct(l.rate)} evadem`, l: `${a.n.label} → ${b.n.label}` }, { l: "alunos (treino)", v: String(l.n) }, ...(l.extra || [])]);
+  });
+  Object.values(pos).forEach(p => {
+    const g = S("g", {}, svg);
+    S("rect", { x: p.x, y: p.y, width: nodeW, height: p.h, rx: 3, fill: riskColor(p.n.rate, base), class: "mark" }, g);
+    const last = p.layer === layers.length - 1, first = p.layer === 0;
+    if (p.h >= 9 || last) T(g, last ? p.x + nodeW + 6 : first ? p.x - 6 : p.x + nodeW + 4, p.y + p.h / 2 + 4, p.n.label, { "text-anchor": first ? "end" : "start", style: "font-size:11px" });
+    const hit = S("rect", { x: p.x - 4, y: p.y, width: nodeW + 8, height: Math.max(p.h, 10), class: "hit" }, g);
+    bindTip(hit, () => [{ v: `${fmtPct(p.n.rate)} evadem`, l: p.n.label }, { l: "alunos (treino)", v: String(p.n.n) }]);
+  });
+  return svg;
+}
+function riskLegend(host, base) {
+  const l = H("div", { class: "legend" }, host);
+  const k = H("span", { class: "k" }, l);
+  H("span", { style: `width:160px;height:10px;border-radius:5px;display:inline-block;background:linear-gradient(90deg, var(--down), var(--mid) ${Math.round(base * 100)}%, var(--up))` }, k);
+  H("span", null, k, `taxa de evasão: 0% (azul) · ${fmtPct(base)} = média (cinza) · 100% (vermelho)`);
+}
+
+/* ---------- 6. Hypercube profile graph (rank layout by #flags) ---------- */
+function hypercube(host, nodes, edges, opt = {}) {
+  // nodes: [{id(bits), k(#flags), n, rate, rate_test, label}], edges: [{u,v,highlight}]
+  const W = 900, Hh = opt.height || 420, padL = 50, padR = 20, top = 20, bottom = 40;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Grafo de perfis" }, host);
+  const K = Math.max(...nodes.map(n => n.k));
+  const x = k => padL + k / K * (W - padL - padR);
+  const y = r => top + (1 - r) * (Hh - top - bottom);
+  [0, .2, .4, .6, .8, 1].forEach(t => { S("line", { x1: padL, x2: W - padR, y1: y(t), y2: y(t), class: "gridline" }, svg); const g = S("g", { class: "tick" }, svg); T(g, padL - 8, y(t) + 4, fmtPct(t, 0), { "text-anchor": "end" }); });
+  for (let k = 0; k <= K; k++) { const g = S("g", { class: "tick" }, svg); T(g, x(k), Hh - bottom + 18, String(k), { "text-anchor": "middle" }); }
+  T(svg, (padL + W - padR) / 2, Hh - 4, opt.xlabel || "nº de flags de risco no perfil (camada do hipercubo)", { "text-anchor": "middle", style: "font-size:11px" });
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  // jitter within column to reduce overlap: by bit order
+  nodes.forEach(n => { n._x = x(n.k) + (n.jit || 0); n._y = y(n.rate); });
+  const maxN = Math.max(...nodes.map(n => n.n));
+  edges.forEach(e => { const a = byId[e.u], b = byId[e.v]; if (!a || !b) return;
+    S("line", { x1: a._x, y1: a._y, x2: b._x, y2: b._y, stroke: e.highlight ? "var(--text-primary)" : "var(--grid)", "stroke-width": e.highlight ? 2 : 1, "stroke-opacity": e.highlight ? 0.9 : 1 }, svg); });
+  nodes.slice().sort((a, b) => b.n - a.n).forEach(n => { const g = S("g", {}, svg);
+    S("circle", { cx: n._x, cy: n._y, r: 4 + 12 * Math.sqrt(n.n / maxN), fill: riskColor(n.rate, opt.base ?? 0.3915), stroke: "var(--surface-1)", "stroke-width": 2, class: "mark" }, g);
+    const hit = S("circle", { cx: n._x, cy: n._y, r: Math.max(12, 4 + 12 * Math.sqrt(n.n / maxN)), class: "hit" }, g);
+    bindTip(hit, () => [{ v: `${fmtPct(n.rate)} evadem (treino)`, l: n.label }, { l: "teste", v: fmtPct(n.rate_test) }, { l: "alunos treino / teste", v: `${n.n} / ${n.n_test ?? "–"}` }]);
+  });
+  return svg;
+}
+
+/* ---------- 7. Simple vertical grouped columns (≤3 series) ---------- */
+function groupedColumns(host, cats, series, opt = {}) {
+  // cats: ['T0','T1','T2']; series: [{name,color,values:[..]}]
+  const W = 760, Hh = opt.height || 260, padL = 44, padR = 10, top = 16, bottom = 44;
+  const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": opt.aria || "Colunas" }, host);
+  const ymin = opt.ymin ?? 0, ymax = opt.ymax ?? 1;
+  const y = v => top + (1 - (v - ymin) / (ymax - ymin)) * (Hh - top - bottom);
+  for (let t = ymin; t <= ymax + 1e-9; t += opt.step || 0.1) { S("line", { x1: padL, x2: W - padR, y1: y(t), y2: y(t), class: Math.abs(t - ymin) < 1e-9 ? "baseline" : "gridline" }, svg); const g = S("g", { class: "tick" }, svg); T(g, padL - 6, y(t) + 4, fmtNum(t, 1), { "text-anchor": "end" }); }
+  const band = (W - padL - padR) / cats.length, bw = Math.min(24, band / (series.length + 1.5));
+  cats.forEach((c, i) => {
+    const cx = padL + band * (i + 0.5);
+    T(svg, cx, Hh - bottom + 18, c, { "text-anchor": "middle", class: "lbl-strong" });
+    series.forEach((s, j) => {
+      const v = s.values[i]; if (v == null) return;
+      const bx = cx + (j - (series.length - 1) / 2) * (bw + 2) - bw / 2;
+      const y0 = y(ymin), y1 = y(v), r = Math.min(4, (y0 - y1));
+      const d = `M${bx},${y0}V${y1 + r}Q${bx},${y1} ${bx + r},${y1}H${bx + bw - r}Q${bx + bw},${y1} ${bx + bw},${y1 + r}V${y0}Z`;
+      const p = S("path", { d, fill: s.color, class: "mark" }, svg);
+      if (opt.labelSeries === j) T(svg, bx + bw / 2, y1 - 5, fmtNum(v, 2), { "text-anchor": "middle", style: "font-size:10.5px" });
+      bindTip(p, () => [{ v: fmtNum(v, 3), l: `${s.name} — ${c}` }]);
+    });
+  });
+  return svg;
+}
+</script>
+<script>(function () {
+  const $ = id => document.getElementById(id);
+  const D = DATA;
+  /* tema */
+  $("themeBtn").addEventListener("click", () => {
+    const r = document.documentElement; const cur = r.getAttribute("data-theme");
+    const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    r.setAttribute("data-theme", dark ? "light" : "dark");
+  });
+  function seg(host, opts, cur, onPick) {
+    const el = $(host); el.replaceChildren();
+    opts.forEach(o => { const b = H("button", { class: "btn", type: "button", "aria-pressed": String(o.k === cur) }, el, o.l);
+      b.addEventListener("click", () => { [...el.children].forEach(c => c.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true"); onPick(o.k); }); });
+  }
+  const SN = [{ k: "T0_ingresso", l: "T0 ingresso" }, { k: "T1_fim_s1", l: "T1 fim S1" }, { k: "T2_fim_s2", l: "T2 fim S2" }];
+
+  /* 1. lift */
+  legend($("legLift"), [{ color: "var(--up)", label: "aumenta a evasão (treino)" }, { color: "var(--down)", label: "diminui a evasão (treino)" }, { type: "dt", color: "var(--text-primary)", label: "mesmo grupo no teste (20%)" }]);
+  divergingLift($("chLift"), D.lift, { padL: 270 });
+  tableToggle($("tabLift"), [
+    { h: "Característica", k: "label" }, { h: "Grupo", k: "group" },
+    { h: "n treino", k: "n_train", num: 1 }, { h: "Evasão treino", f: r => fmtPct(r.rate_train), num: 1 }, { h: "Lift treino", f: r => fmtX(r.lift_train), num: 1 },
+    { h: "n teste", k: "n_test", num: 1 }, { h: "Evasão teste", f: r => fmtPct(r.rate_test), num: 1 }, { h: "Lift teste", f: r => fmtX(r.lift_test), num: 1 },
+    { h: "q (BH) treino", f: r => r.q < 0.001 ? "<0,001" : fmtNum(r.q, 3), num: 1 }], D.lift);
+
+  /* tabela de variáveis */
+  (function () {
+    const host = $("tabVars"); const wrap = H("div", { class: "tablewrap", style: "max-height:420px" }, host);
+    const t = H("table", { class: "t" }, wrap); const hr = H("tr", null, H("thead", null, t));
+    ["#", "Variável", "Grupo", "IM treino", "IM teste", "V Cramér teste"].forEach((h, i) => H("th", { class: i >= 3 || i === 0 ? "num" : "" }, hr, h));
+    const tb = H("tbody", null, t);
+    D.vars.forEach((r, i) => { const tr = H("tr", null, tb); H("td", { class: "num" }, tr, String(i + 1)); H("td", null, tr, r.var); H("td", null, tr, r.grupo);
+      H("td", { class: "num" }, tr, fmtNum(r.mi_tr, 3)); H("td", { class: "num" }, tr, fmtNum(r.mi_te, 3)); H("td", { class: "num" }, tr, fmtNum(r.v_te, 2)); });
+  })();
+
+  /* sinergias */
+  (function () {
+    const host = $("tabSyn"); const wrap = H("div", { class: "tablewrap" }, host); const t = H("table", { class: "t" }, wrap);
+    const hr = H("tr", null, H("thead", null, t)); ["Fator A + Fator B", "n tr.", "Evasão tr.", "Sinergia tr.", "Sinergia teste", "Repete?"].forEach((h, i) => H("th", { class: i ? "num" : "" }, hr, h));
+    const tb = H("tbody", null, t);
+    D.syn.forEach(r => { const tr = H("tr", null, tb); H("td", null, tr, `${r.a} + ${r.b}`); H("td", { class: "num" }, tr, String(r.n)); H("td", { class: "num" }, tr, fmtPct(r.rate));
+      H("td", { class: "num" }, tr, fmtPP(r.syn)); H("td", { class: "num" }, tr, fmtPP(r.syn_te)); const c = H("td", { class: "num" }, tr); H("span", { class: "pill " + (r.rep ? "ok" : "no") }, c, r.rep ? "sim" : "não"); });
+  })();
+  /* estratificação */
+  (function () {
+    const host = $("tabStrat"); const wrap = H("div", { class: "tablewrap" }, host); const t = H("table", { class: "t" }, wrap);
+    const hr = H("tr", null, H("thead", null, t)); ["Fator", "Dentro do estrato", "Com fator (tr / te)", "Sem fator (tr / te)"].forEach((h, i) => H("th", { class: i >= 2 ? "num" : "" }, hr, h));
+    const tb = H("tbody", null, t);
+    D.strat.forEach(r => { const tr = H("tr", null, tb); H("td", null, tr, r.fator); H("td", null, tr, r.estrato);
+      H("td", { class: "num" }, tr, `${fmtPct(r.com, 0)} / ${fmtPct(r.com_te, 0)} (n=${r.n_com})`); H("td", { class: "num" }, tr, `${fmtPct(r.sem, 0)} / ${fmtPct(r.sem_te, 0)} (n=${r.n_sem})`); });
+  })();
+
+  /* 2. ablação */
+  const GN = { demografico: "Demográfico", familia: "Família", ingresso: "Ingresso", macro: "Macro (coorte)", financeiro: "Financeiro", academico_s1: "Acadêmico S1", academico_s2: "Acadêmico S2" };
+  function drawLogo(s) { const el = $("chLogo"); el.replaceChildren();
+    deltaBars(el, D.abl[s].logo.map(r => ({ label: `${GN[r.label] || r.label} (${r.n} var.)`, mean: r.mean, sd: r.sd, cls: r.cls, extra: [{ l: "bal. acc sem o grupo", v: fmtNum(r.bal_sem, 3) }, { l: "p (t pareado, 5 dobras)", v: fmtNum(r.p, 4) }, { l: "p Holm", v: fmtNum(r.p_holm, 4) }] })), { padL: 200, ext: 0.1 }); }
+  seg("segLogo", SN, "T1_fim_s1", drawLogo); drawLogo("T1_fim_s1");
+  legend($("legLofo"), [{ color: "var(--s1)", label: "essencial (IC 95% < 0)" }, { color: "var(--neutral)", label: "neutra" }, { color: "var(--s2)", label: "prejudicial (IC 95% > 0)" }]);
+  function drawLofo(s) { const el = $("chLofo"); el.replaceChildren();
+    deltaBars(el, D.abl[s].lofo.map(r => ({ label: r.label, mean: r.mean, sd: r.sd, cls: r.cls, extra: [{ l: "p", v: fmtNum(r.p, 4) }] })), { padL: 200, ext: 0.06 }); }
+  seg("segLofo", SN, "T0_ingresso", drawLofo); drawLofo("T0_ingresso");
+
+  /* esquema de fluxo */
+  (function () {
+    const host = $("chFlowSchema"); const W = 520, Hh = 250;
+    const svg = S("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img", "aria-label": "Esquema da rede de fluxo" }, host);
+    const Sx = 40, Tx = 480, cy = 125;
+    const dro = [[140, 50], [140, 110], [140, 170]], gra = [[380, 60], [380, 125], [380, 190]], unl = [[260, 70], [255, 135], [265, 200]];
+    const all = { d: dro, g: gra, u: unl };
+    const sim = [[dro[0], unl[0], 3], [dro[1], unl[0], 1.5], [dro[1], unl[1], 2.5], [unl[1], gra[1], 1.2], [unl[0], gra[0], 1], [unl[2], gra[2], 3], [dro[2], unl[2], 1], [unl[1], unl[2], 1], [dro[2], unl[1], 1.4]];
+    sim.forEach(([a, b, w]) => S("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: "var(--axis)", "stroke-width": w }, svg));
+    dro.forEach(p => S("line", { x1: Sx, y1: cy, x2: p[0], y2: p[1], stroke: "var(--up)", "stroke-width": 1.5, "stroke-opacity": .6 }, svg));
+    gra.forEach(p => S("line", { x1: p[0], y1: p[1], x2: Tx, y2: cy, stroke: "var(--down)", "stroke-width": 1.5, "stroke-opacity": .6 }, svg));
+    S("path", { d: "M300,20 C290,90 330,150 300,235", fill: "none", stroke: "var(--text-primary)", "stroke-width": 2, "stroke-dasharray": "6 5" }, svg);
+    T(svg, 306, 18, "corte mínimo", { style: "font-size:11px", class: "lbl-strong" });
+    const node = (p, fill, lbl) => { S("circle", { cx: p[0], cy: p[1], r: 9, fill, stroke: "var(--surface-1)", "stroke-width": 2 }, svg); if (lbl) T(svg, p[0], p[1] + 24, lbl, { "text-anchor": "middle", style: "font-size:10.5px" }); };
+    dro.forEach((p, i) => node(p, "var(--up)", i === 2 ? "evadidos (treino)" : ""));
+    gra.forEach((p, i) => node(p, "var(--down)", i === 2 ? "formados (treino)" : ""));
+    unl.forEach((p, i) => node(p, "var(--surface-2)", i === 2 ? "alunos do teste" : ""));
+    unl.forEach(p => S("circle", { cx: p[0], cy: p[1], r: 9, fill: "none", stroke: "var(--text-secondary)", "stroke-width": 1.5 }, svg));
+    S("circle", { cx: Sx, cy, r: 14, fill: "var(--up)" }, svg); T(svg, Sx, cy + 4, "S", { "text-anchor": "middle", style: "fill:#fff;font-weight:700" });
+    S("circle", { cx: Tx, cy, r: 14, fill: "var(--down)" }, svg); T(svg, Tx, cy + 4, "T", { "text-anchor": "middle", style: "fill:#fff;font-weight:700" });
+    T(svg, Sx, cy + 34, "cap. ∞", { "text-anchor": "middle", style: "font-size:10.5px" }); T(svg, Tx, cy + 34, "cap. ∞", { "text-anchor": "middle", style: "font-size:10.5px" });
+    T(svg, 200, 240, "capacidade = similaridade de Gower (espessura)", { "text-anchor": "middle", style: "font-size:10.5px" });
+  })();
+
+  /* 3. Chow-Liu */
+  function drawCL(v) { const el = $("chCL"); el.replaceChildren();
+    const nodes = D.cl[v].nodes.map(n => Object.assign({}, n, { color: n.id === "y" ? "var(--up)" : `color-mix(in oklab, var(--s1) ${Math.round(25 + 75 * Math.min(1, (n.mi_target || 0) / 0.2))}%, var(--mid))` }));
+    treeGraph(el, nodes, D.cl[v].edges, { root: "y", colW: 165 }); }
+  seg("segCL", [{ k: "T0", l: "T0 ingresso" }, { k: "T1", l: "T1 fim S1" }, { k: "T2", l: "T2 fim S2" }], "T1", drawCL); drawCL("T1");
+
+  /* 4. Sankey */
+  riskLegend($("legSankey"), D.base);
+  sankey($("chSankey"), D.sankey.layers, D.sankey.links, { base: D.base, height: 520 });
+
+  /* 5. Hipercubo */
+  riskLegend($("legHC"), D.base);
+  hypercube($("chHC"), D.hc.nodes, D.hc.edges, { base: D.base, height: 420 });
+  (function () {
+    const host = $("tabFlagEff"); const t = H("table", { class: "t" }, host); const hr = H("tr", null, H("thead", null, t));
+    ["Flag", "arestas", "Δ evasão treino", "Δ evasão teste"].forEach((h, i) => H("th", { class: i ? "num" : "" }, hr, h)); const tb = H("tbody", null, t);
+    D.flag_eff.forEach(r => { const tr = H("tr", null, tb); H("td", null, tr, r.flag); H("td", { class: "num" }, tr, String(r.n_edges)); H("td", { class: "num" }, tr, fmtPP(r.delta_tr)); H("td", { class: "num" }, tr, fmtPP(r.delta_te)); });
+    const host2 = $("tabIv"); const w2 = H("div", { class: "tablewrap" }, host2); const t2 = H("table", { class: "t" }, w2); const h2 = H("tr", null, H("thead", null, t2));
+    ["Perfil de origem", "n", "Passos (Dijkstra)", "Destino", "Evasão origem → destino (treino)", "teste"].forEach((h, i) => H("th", { class: i === 1 || i >= 4 ? "num" : "" }, h2, h)); const b2 = H("tbody", null, t2);
+    D.iv.forEach(r => { const tr = H("tr", null, b2); H("td", null, tr, r.frm); H("td", { class: "num" }, tr, String(r.n)); H("td", null, tr, r.steps); H("td", null, tr, r.to);
+      H("td", { class: "num" }, tr, `${fmtPct(r.r_from, 0)} → ${fmtPct(r.r_to, 0)}`); H("td", { class: "num" }, tr, `${fmtPct(r.r_from_te, 0)} → ${fmtPct(r.r_to_te, 0)}`); });
+    H("p", { class: "small muted" }, host2, "Siglas: MA mensalidade atrasada · DV devedor · SB sem bolsa · ID idade ≥ 23 · S1/S2 aprovação < 50% no semestre.");
+  })();
+
+  /* 6. Teste */
+  if (D.test && D.test.length) {
+    legend($("legTest"), [{ type: "dt", color: "var(--s1)", label: "corte mínimo (solução)" }, { type: "dt", color: "var(--text-secondary)", label: "outros métodos de grafo" }, { type: "dt", color: "var(--neutral)", label: "baselines" }, { type: "dt", color: "var(--s2)", label: "regressão logística (referência)" }]);
+    dotCI($("chTest"), D.test, { xmin: 0.4, xmax: 1, ref: 0.5, metric: "acurácia balanceada", padL: 300 });
+    tableToggle($("tabTest"), [
+      { h: "Momento", k: "snap" }, { h: "Método", k: "metodo" },
+      { h: "Acc", f: r => fmtNum(r.acc, 3), num: 1 }, { h: "Bal. acc", f: r => fmtNum(r.bal_acc, 3), num: 1 },
+      { h: "IC 95%", f: r => r.ci ? `${fmtNum(r.ci[0], 3)}–${fmtNum(r.ci[1], 3)}` : "–", num: 1 },
+      { h: "Precisão ev.", f: r => fmtNum(r.prec_dropout, 3), num: 1 }, { h: "Recall ev.", f: r => fmtNum(r.rec_dropout, 3), num: 1 },
+      { h: "F1 ev.", f: r => fmtNum(r.f1_dropout, 3), num: 1 }, { h: "MCC", f: r => fmtNum(r.mcc, 3), num: 1 }, { h: "AUC", f: r => fmtNum(r.auc, 3), num: 1 },
+      { h: "TP/FP/FN/TN", f: r => `${r.tp}/${r.fp}/${r.fn}/${r.tn}`, num: 1 }], D.test_table, "Ver tabela completa do teste");
+  } else { H("p", { class: "muted" }, $("chTest"), "Resultados finais do teste ainda não gerados."); }
+})();
+</script>
+</body></html>
