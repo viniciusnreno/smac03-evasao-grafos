@@ -3,7 +3,7 @@
 Projeto da disciplina SMAC03 – Grafos (UNIFEI, 2026/2), Cenário 3.
 Dataset: [UCI 697 – Predict Students' Dropout and Academic Success](https://archive.ics.uci.edu/dataset/697/predict+students+dropout+and+academic+success).
 
-O plano completo está em [docs/plano-v3.html](docs/plano-v3.html) (plano de ação) e [docs/plano-v2.html](docs/plano-v2.html) (análise técnica).
+Contexto do projeto em [docs/README.md](docs/README.md). O plano completo está em [docs/planos/plano-v3.html](docs/planos/plano-v3.html) (plano de ação) e [docs/planos/plano-v2.html](docs/planos/plano-v2.html) (análise técnica).
 
 ## Grafos
 
@@ -47,7 +47,7 @@ src/
 ├── figuras.py              # Rafael
 └── main.py                 # Carlos
 outputs/                    # resultados e figuras gerados
-docs/                       # planos v2 e v3
+docs/                       # documentação do projeto (comece por docs/README.md)
 relatorio/                  # projeto LaTeX (Overleaf)
 slides/
 ```
