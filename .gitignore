@@ -11,3 +11,5 @@ relatorio/*.log
 relatorio/*.bbl
 relatorio/*.blg
 relatorio/*.out
+
+docs/Grafo Temporal da Evasão.html
