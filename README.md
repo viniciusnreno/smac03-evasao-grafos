@@ -15,6 +15,8 @@ Protocolo: alunos "Enrolled" removidos; treino/teste 80/20 estratificado (sement
 
 ## Instalação
 
+Requisitos: Python 3.12 e Git. O repositório é privado: peça ao dono para ser adicionado como colaborador.
+
 ```bash
 git clone git@github.com:viniciusnreno/smac03-evasao-grafos.git
 cd smac03-evasao-grafos
@@ -48,3 +50,5 @@ outputs/                    # resultados e figuras gerados
 relatorio/                  # projeto LaTeX (Overleaf)
 slides/
 ```
+
+**Atenção:** `relatorio/` e `slides/` ainda trazem o conteúdo do modelo v1 (Louvain e comunidades), que foi descartado. Serão reescritos conforme o plano v3.
