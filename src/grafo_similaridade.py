@@ -1,5 +1,9 @@
-"""G1: grafo de similaridade entre alunos (responsável: Carlos).
+"""G1: grafo de similaridade. Classe: ``GrafoSimilaridade(ModeloGrafo)``.
 
-Distância de Gower ponderada pela informação mútua (calculada só no treino)
-e grafo kNN com capacidade c(i, j) = 1 - d(i, j).
+Responsável: Carlos.
+
+- ``construir``: distância de Gower ponderada pela informação mútua
+  (só treino) e kNN com capacidade c(i, j) = 1 - d(i, j).
+- ``executar``: chama ``CorteMinimo`` e devolve as previsões.
+- ``destaques``: arestas do corte e alunos de cada lado.
 """

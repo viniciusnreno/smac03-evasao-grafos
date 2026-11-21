@@ -1,4 +1,6 @@
-"""Figuras do relatório em PDF vetorial (responsável: Rafael).
+"""Figuras do relatório em PDF vetorial. Classe: ``GeradorFiguras``.
 
-Fig. 3 lift treino x teste, Fig. 4 ablação por grupo, Fig. 5 árvore de Kruskal.
+Responsável: Rafael.
+
+Fig. 3 lift treino x teste, Fig. 4 ablação, Fig. 5 árvore de Kruskal.
 """
