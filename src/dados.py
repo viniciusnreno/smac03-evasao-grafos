@@ -71,6 +71,17 @@ NOMINAIS: frozenset[str] = frozenset({
     "Father's qualification", "Mother's occupation", "Father's occupation",
 })
 
+# Faixas da taxa de aprovação de um semestre (camadas L2/L3 do G3 e
+# discretização da informação mútua no G1).
+FAIXAS_APROVACAO: tuple[str, ...] = (
+    "sem inscricao", "0%", "(0,50%)", "[50,100%)", "100%")
+
+
+def faixa_aprovacao(taxa: pd.Series) -> np.ndarray:
+    """Faixa de cada taxa de aprovação; ``NaN`` vira "sem inscricao"."""
+    return np.select([taxa.isna(), taxa == 0, taxa < 0.5, taxa < 1],
+                     FAIXAS_APROVACAO[:4], FAIXAS_APROVACAO[4])
+
 
 class BaseDeDados:
     """Alunos com desfecho conhecido, divididos em treino e teste.
