@@ -15,7 +15,7 @@ Protocolo: alunos "Enrolled" removidos; treino/teste 80/20 estratificado (sement
 
 ## Instalação
 
-Requisitos: Python 3.12 e Git. O repositório é privado: peça ao dono para ser adicionado como colaborador.
+Requisitos: Python 3.14 (testado com 3.14.4) e Git. O repositório é privado: peça ao dono para ser adicionado como colaborador.
 
 ```bash
 git clone git@github.com:viniciusnreno/smac03-evasao-grafos.git
@@ -28,10 +28,13 @@ pip install -r requirements.txt
 ## Execução
 
 ```bash
-python src/main.py
+python src/main.py            # pipeline completo, grava em outputs/ (~2h10)
+python src/main.py --rapido   # sem ablação, backward e robustez (~2 min)
+python src/figuras.py         # fatores_* em outputs/ e Figs. 3–5 do relatório
+streamlit run src/app.py      # interface gráfica (lê outputs/)
 ```
 
-Em construção: os módulos de `src/` ainda são esqueletos.
+O pipeline confere cada algoritmo de grafo com o networkx em asserts (Edmonds–Karp, Kruskal, Kahn e Bellman-Ford). Os números do relatório vêm de `outputs/`.
 
 ## Estrutura
 
@@ -46,11 +49,15 @@ src/
 ├── arvore_dependencias.py  # Carlos (Kruskal)
 ├── dag_trajetorias.py      # Carlos (Kahn + Bellman-Ford)
 ├── avaliacao.py            # Rafael
+├── fatores.py              # Rafael (lift e informação mútua)
 ├── figuras.py              # Rafael
-└── main.py                 # Carlos
+├── main.py                 # Carlos
+├── app.py                  # Rafael (interface Streamlit)
+├── visual.py               # Rafael (desenho dos grafos)
+└── passo_a_passo.py        # Rafael (Edmonds–Karp e Kruskal passo a passo)
 outputs/                    # resultados e figuras gerados
 relatorio/                  # projeto LaTeX (Overleaf)
 slides/
 ```
 
-**Atenção:** `relatorio/` e `slides/` ainda trazem o conteúdo do modelo v1 (Louvain e comunidades), que foi descartado. Serão reescritos conforme o plano v3.
+**Atenção:** a versão final do relatório é editada no Overleaf. Em `relatorio/`, só a seção 3.2 e as figuras estão atualizadas; as demais seções e `slides/` ainda trazem o conteúdo do modelo v1 (Louvain e comunidades), que foi descartado.

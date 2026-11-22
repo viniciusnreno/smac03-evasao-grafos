@@ -28,10 +28,10 @@ import pandas as pd
 from arvore_dependencias import DESFECHO, N_BOOTSTRAP, ArvoreDependencias
 from avaliacao import DOBRAS, N_SPLITS, Avaliador
 from avaliacao import N_BOOTSTRAP as N_BOOTSTRAP_IC
-from corte_minimo import ClassificadorCorteMinimo
+from corte_minimo import FONTE, SUMIDOURO, ClassificadorCorteMinimo
 from dados import SEMENTE, BaseDeDados
-from dag_trajetorias import (CAMADAS_POR_MOMENTO, MIN_SUPORTE, SUAVIZACAO,
-                             DagTrajetorias)
+from dag_trajetorias import (CAMADAS_POR_MOMENTO, EVASAO, FORMATURA, INICIO,
+                             MIN_SUPORTE, SUAVIZACAO, DagTrajetorias)
 from grafo_similaridade import K_PADRAO, GrafoSimilaridade
 
 SAIDA_PADRAO = Path(__file__).resolve().parent.parent / "outputs"
@@ -142,6 +142,8 @@ class Pipeline:
             modelo = GrafoSimilaridade(m, K_PADRAO[m])
             modelo.construir(base)
             r = modelo.executar()
+            if self.verificar:
+                self._conferir_corte(modelo, r)
             y_prev = np.array([r["previsoes"][i] for i in base.idx_teste])
             previsoes[m] = y_prev
             met = Avaliador.metricas(y_teste, y_prev)
@@ -269,7 +271,7 @@ class Pipeline:
             modelo.construir(base)
             r = modelo.executar()
             if self.verificar:
-                self._conferir_dag(modelo)
+                self._conferir_dag(modelo, r)
             # Previsão e risco por aluno vão para o CSV, não para o JSON.
             resumo = {c: v for c, v in r.items()
                       if c not in ("previsoes", "risco")}
@@ -324,6 +326,30 @@ class Pipeline:
     # Conferências com o networkx (só asserts)
     # ------------------------------------------------------------------
     @staticmethod
+    def _conferir_corte(modelo: GrafoSimilaridade, r: dict) -> None:
+        """Compara o Edmonds-Karp e a BFS do corte com o networkx.
+
+        Remonta a mesma rede de fluxo (com S e T) e confere o valor do
+        fluxo máximo e o lado de cada aluno do teste no corte mínimo.
+        O lado de S achado pela BFS no residual é o mesmo para qualquer
+        fluxo máximo, por isso a partição pode ser comparada exatamente.
+        """
+        import networkx as nx
+
+        classificador = ClassificadorCorteMinimo(lam=modelo.lam,
+                                                 registrar=True)
+        classificador.classificar(modelo.grafo, modelo.rotulos_,
+                                  modelo.idx_sem_rotulo_)
+        rede = classificador.rede.para_networkx(atributo="capacity")
+        valor_nx, (lado_s_nx, _) = nx.minimum_cut(rede, FONTE, SUMIDOURO)
+        erro = abs(r["fluxo"] - valor_nx)
+        assert erro <= TOLERANCIA * max(1.0, valor_nx), \
+            "Edmonds-Karp difere do networkx (valor do fluxo)"
+        assert all(r["previsoes"][u] == (u in lado_s_nx)
+                   for u in modelo.idx_sem_rotulo_), \
+            "corte mínimo difere do networkx (lado dos alunos)"
+
+    @staticmethod
     def _conferir_kruskal(modelo: ArvoreDependencias, r: dict) -> None:
         """Compara o nosso Kruskal com o do networkx.
 
@@ -352,12 +378,34 @@ class Pipeline:
         assert abs(r - r_nx) < 1e-6, "assortatividade difere do networkx"
 
     @staticmethod
-    def _conferir_dag(modelo: DagTrajetorias) -> None:
-        """Confirma com o networkx que o grafo do G3 não tem ciclo."""
+    def _conferir_dag(modelo: DagTrajetorias, r: dict) -> None:
+        """Compara o G3 com o networkx: DAG, ordem de Kahn e Bellman-Ford.
+
+        No Bellman-Ford compara-se o custo das duas trajetórias, e não o
+        caminho, porque caminhos empatados também são mínimos.
+        """
         import networkx as nx
 
-        assert nx.is_directed_acyclic_graph(modelo.grafo.para_networkx()), \
-            "o grafo do G3 tem ciclo"
+        dag = modelo.grafo.para_networkx()
+        assert nx.is_directed_acyclic_graph(dag), "o grafo do G3 tem ciclo"
+        posicao = {v: i for i, v in enumerate(r["ordem_topologica"])}
+        assert len(posicao) == len(dag) and all(
+            posicao[u] < posicao[v] for u, v in dag.edges()), \
+            "a ordem de Kahn não é topológica"
+        for chave, destino in (("trajetoria_risco", EVASAO),
+                               ("trajetoria_segura", FORMATURA)):
+            pesos = modelo.grafo_pesos(
+                destino, r["ordem_topologica"]).para_networkx()
+            caminho = r[chave]["caminho"]
+            if not caminho:
+                assert not nx.has_path(pesos, INICIO, destino), \
+                    "Bellman-Ford não achou um caminho que existe"
+                continue
+            custo = sum(pesos[u][v]["weight"]
+                        for u, v in zip(caminho, caminho[1:]))
+            custo_nx = nx.bellman_ford_path_length(pesos, INICIO, destino)
+            assert abs(custo - custo_nx) < TOLERANCIA, \
+                "Bellman-Ford difere do networkx"
 
     # ------------------------------------------------------------------
     # Registro dos parâmetros e do ambiente

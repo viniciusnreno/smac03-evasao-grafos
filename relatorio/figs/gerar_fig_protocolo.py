@@ -73,7 +73,7 @@ class FiguraProtocolo:
             f"{round(divisao['treino'] * 100)}/"
             f"{round(divisao['teste'] * 100)}\nestratificada\n"
             f"({br(d['treino'])} treino, {br(d['teste'])} teste)",
-            f"Escolha de k, λ e pesos\npor CV de "
+            f"Pesos, faixas e limiares\ne CV de "
             f"{h['dobras_cv_treino']} dobras\n(só no treino)",
             "Modelagem em rede:\nG1, G2 e G3",
             "Algoritmos de aula:\nEdmonds–Karp, Kruskal,\n"

@@ -335,13 +335,21 @@ class DagTrajetorias(ModeloGrafo):
                 return self._evasoes_trecho[trecho] / n
         return self.taxa_treino_
 
-    def _trajetoria(self, ordem: list[Hashable], destino: str) -> dict:
-        """Caminho de INICIO a ``destino`` que maximiza o produto das
-        taxas (de evasão ou de formatura) dos arcos com suporte.
+    def grafo_pesos(self, destino: str,
+                    ordem: list[Hashable] | None = None) -> Grafo:
+        """Grafo em que o Bellman-Ford procura o caminho até ``destino``.
 
-        Bellman-Ford com peso -ln(taxa suavizada): somar -ln equivale a
-        multiplicar as taxas. Os arcos entram em ordem topológica.
+        Só entram os arcos com pelo menos ``min_suporte`` alunos, com
+        peso -ln da taxa suavizada: de evasão se ``destino`` é
+        ``EVASAO``, de formatura se é ``FORMATURA``. Vértices e arcos
+        seguem a ``ordem`` topológica (a de Kahn, se omitida).
         """
+        if self.grafo is None:
+            raise RuntimeError("chame construir antes de grafo_pesos")
+        if destino not in (EVASAO, FORMATURA):
+            raise ValueError(f"destino inválido: {destino!r}")
+        if ordem is None:
+            ordem = Kahn().ordenar(self.grafo)
         evasao = destino == EVASAO
         pesos = Grafo(dirigido=True)
         for v in ordem:
@@ -355,9 +363,17 @@ class DagTrajetorias(ModeloGrafo):
                 favoraveis = ev if evasao else n - ev
                 taxa = (favoraveis + SUAVIZACAO) / (n + 2 * SUAVIZACAO)
                 pesos.adicionar_aresta(u, v, -math.log(taxa))
+        return pesos
 
+    def _trajetoria(self, ordem: list[Hashable], destino: str) -> dict:
+        """Caminho de INICIO a ``destino`` que maximiza o produto das
+        taxas (de evasão ou de formatura) dos arcos com suporte.
+
+        Bellman-Ford com peso -ln(taxa suavizada): somar -ln equivale a
+        multiplicar as taxas. Os arcos entram em ordem topológica.
+        """
         bf = BellmanFord()
-        bf.distancias(pesos, INICIO)
+        bf.distancias(self.grafo_pesos(destino, ordem), INICIO)
         caminho = bf.caminho(destino)
         trecho = tuple(caminho[1:-1])
         return {
