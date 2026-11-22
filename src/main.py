@@ -1,32 +1,15 @@
-"""Pipeline completo. Classe: ``Pipeline``.
+"""Pipeline completo: roda os três grafos e grava os resultados.
 
-Responsável: Carlos.
-
-Constrói e executa os modelos G1, G2 e G3 (todos ``ModeloGrafo``) e
-grava os resultados em outputs/. Segue o protocolo 80/20 do relatório:
-
-1. ``BaseDeDados``: remove os Enrolled e faz a divisão oficial
-   (2.904 treino / 726 teste, semente 42), gravada em ``split.csv``.
-2. Hiperparâmetros fixos, escolhidos antes por CV de 5 dobras só no
-   treino (``K_PADRAO``, λ = 1,0, taxas derivadas incluídas).
-3. G1: kNN de Gower + corte mínimo (Edmonds-Karp) classifica o teste,
-   que é usado **uma única vez**. Assortatividade do desfecho (H5) no
-   kNN só de treino, com teste de permutação.
-4. G2: árvore geradora máxima de informação mútua (Kruskal) no treino,
-   estabilidade por bootstrap e replicação da árvore no teste (H2).
-5. G3: DAG de trajetórias (Kahn + Bellman-Ford), se já implementado.
-6. Avaliação (``Avaliador``, ``avaliacao.py``): CV no treino, teste
-   com IC por bootstrap, AUC, McNemar com Holm, ablação, eliminação
-   backward e robustez em 10 divisões. O ``Avaliador`` devolve as
-   tabelas e o ``Pipeline`` grava.
-7. Conferências com o networkx (só asserts) e gravação dos arquivos.
-
-As figuras ficam no ``GeradorFiguras`` (``figuras.py``), que lê os
-arquivos gravados aqui.
+1. Carrega os dados e separa treino e teste (80/20, semente 42).
+2. G1: grafo de alunos parecidos, classificado pelo corte mínimo
+   (Edmonds-Karp). O teste é usado uma única vez.
+3. G2: árvore de dependências entre fatores (Kruskal).
+4. G3: DAG de trajetórias (Kahn + Bellman-Ford).
+5. Avaliação estatística (``Avaliador``) e gravação em ``outputs/``.
 
 Uso::
 
-    python src/main.py            # completo (~30 min)
+    python src/main.py            # completo
     python src/main.py --rapido   # sem ablação, backward e robustez
 """
 
@@ -43,30 +26,22 @@ import numpy as np
 import pandas as pd
 
 from arvore_dependencias import DESFECHO, N_BOOTSTRAP, ArvoreDependencias
-from avaliacao import Avaliador
+from avaliacao import DOBRAS, N_SPLITS, Avaliador
+from avaliacao import N_BOOTSTRAP as N_BOOTSTRAP_IC
 from corte_minimo import ClassificadorCorteMinimo
 from dados import SEMENTE, BaseDeDados
+from dag_trajetorias import (CAMADAS_POR_MOMENTO, MIN_SUPORTE, SUAVIZACAO,
+                             DagTrajetorias)
 from grafo_similaridade import K_PADRAO, GrafoSimilaridade
-
-try:
-    from dag_trajetorias import (CAMADAS_POR_MOMENTO, MIN_SUPORTE,
-                                 SUAVIZACAO, DagTrajetorias)
-except ImportError:          # G3 ainda não implementado
-    DagTrajetorias = None
 
 SAIDA_PADRAO = Path(__file__).resolve().parent.parent / "outputs"
 MOMENTOS = ("T0", "T1", "T2")
-DOBRAS_CV = 5
 
-# Assortatividade (H5): kNN só de treino, k = 10, pesos iguais e sem as
-# taxas derivadas, como no analise_v2; 200 permutações dos rótulos.
+# Assortatividade: o quanto alunos ligados no grafo têm o mesmo
+# desfecho. Medida num kNN só de treino, com pesos iguais, e comparada
+# com rótulos embaralhados (teste de permutação).
 K_ASSORTATIVIDADE = 10
 N_PERMUTACOES = 200
-
-# Parâmetros do protocolo executados pelo Avaliador (registrados na
-# Tab. 2 do relatório).
-N_BOOTSTRAP_IC = 1000
-N_SPLITS_ROBUSTEZ = 10
 
 TOLERANCIA = 1e-9
 
@@ -76,18 +51,16 @@ BIBLIOTECAS = ("numpy", "pandas", "scikit-learn", "scipy", "networkx",
 
 
 class Pipeline:
-    """Orquestra os modelos de grafo e grava os resultados.
+    """Executa os modelos de grafo e grava os resultados.
 
     Parâmetros:
-        saida: pasta dos resultados (``outputs/``).
+        saida: pasta dos resultados.
         momentos: momentos da trajetória a rodar.
         n_bootstrap_arvore: reamostragens da estabilidade do G2.
         n_permutacoes: permutações do teste de assortatividade.
-        verificar: confere G2 e assortatividade com o networkx.
-        avaliacao_completa: inclui ablação, eliminação backward e
-            robustez (as partes demoradas da avaliação).
-        progresso: função que recebe mensagens de andamento (``print``
-            na linha de comando; a interface gráfica pode passar outra).
+        verificar: confere os resultados com o networkx.
+        avaliacao_completa: inclui as partes demoradas da avaliação.
+        progresso: recebe as mensagens de andamento (ex.: ``print``).
     """
 
     def __init__(self, saida: Path | str = SAIDA_PADRAO,
@@ -103,7 +76,7 @@ class Pipeline:
         self.n_permutacoes = n_permutacoes
         self.verificar = verificar
         self.avaliacao_completa = avaliacao_completa
-        self._progresso = progresso or (lambda _msg: None)
+        self._avisar = progresso or (lambda _msg: None)
         self.base: BaseDeDados | None = None
         self.resultados: dict = {}
         self._tempos: dict[str, float] = {}
@@ -112,7 +85,7 @@ class Pipeline:
     # Execução
     # ------------------------------------------------------------------
     def executar(self) -> dict:
-        """Roda o protocolo completo e devolve o dict de resultados."""
+        """Roda todas as etapas e devolve o dict de resultados."""
         inicio = time.perf_counter()
         self._tempos = {}
         self._avisar("Carregando dados e divisão 80/20 (semente 42)")
@@ -146,52 +119,8 @@ class Pipeline:
                      f"resultados em {self.saida}")
         return self.resultados
 
-    @staticmethod
-    def ambiente() -> dict:
-        """Ambiente de execução ("Ambiente de testes" do relatório).
-
-        Registra versões, sistema, processador e memória; não registra
-        nome de usuário nem da máquina.
-        """
-        bibliotecas = {}
-        for nome in BIBLIOTECAS:
-            try:
-                bibliotecas[nome] = metadata.version(nome)
-            except metadata.PackageNotFoundError:
-                bibliotecas[nome] = None
-        return {
-            "python": platform.python_version(),
-            "bibliotecas": bibliotecas,
-            "sistema": f"{platform.system()} {platform.release()}",
-            "processador": Pipeline._processador(),
-            "nucleos_logicos": os.cpu_count(),
-            "memoria_gb": Pipeline._memoria_gb(),
-        }
-
-    @staticmethod
-    def _processador() -> str:
-        """Modelo da CPU (``/proc/cpuinfo`` no Linux)."""
-        try:
-            with open("/proc/cpuinfo", encoding="utf-8") as arquivo:
-                for linha in arquivo:
-                    if linha.startswith("model name"):
-                        return linha.split(":", 1)[1].strip()
-        except OSError:
-            pass
-        return platform.processor() or platform.machine()
-
-    @staticmethod
-    def _memoria_gb() -> float | None:
-        """Memória RAM total em GB, quando o sistema informa."""
-        try:
-            paginas = os.sysconf("SC_PHYS_PAGES")
-            tamanho = os.sysconf("SC_PAGE_SIZE")
-        except (AttributeError, ValueError, OSError):
-            return None
-        return round(paginas * tamanho / 1024 ** 3, 1)
-
     def _cronometrar(self, etapa: str, funcao: Callable):
-        """Executa ``funcao`` e guarda o tempo da etapa, em segundos."""
+        """Executa ``funcao`` e guarda quanto tempo a etapa levou."""
         inicio = time.perf_counter()
         resultado = funcao()
         self._tempos[etapa] = time.perf_counter() - inicio
@@ -215,11 +144,12 @@ class Pipeline:
             r = modelo.executar()
             y_prev = np.array([r["previsoes"][i] for i in base.idx_teste])
             previsoes[m] = y_prev
-            met = self.metricas(y_teste, y_prev)
+            met = Avaliador.metricas(y_teste, y_prev)
             metricas.append({"momento": m, "metodo": "corte_minimo", **met})
+            # Referência: prever que todo aluno se forma.
             metricas.append({"momento": m, "metodo": "classe_majoritaria",
-                             **self.metricas(y_teste,
-                                             np.zeros_like(y_teste))})
+                             **Avaliador.metricas(y_teste,
+                                                  np.zeros_like(y_teste))})
             saida[m] = {
                 "k": r["k"], "lam": r["lam"], "fluxo": r["fluxo"],
                 "num_caminhos": r["num_caminhos"],
@@ -236,12 +166,16 @@ class Pipeline:
         return saida
 
     def _assortatividade(self) -> dict:
-        """Assortatividade do desfecho no kNN de treino (H5)."""
+        """Mede se alunos vizinhos no grafo tendem a ter o mesmo desfecho.
+
+        O valor real é comparado com o de rótulos embaralhados; o p-valor
+        é a fração de embaralhamentos que chegam ao valor real.
+        """
         base = self.base
         rng = np.random.default_rng(SEMENTE)
         linhas, saida = [], {}
         for m in self.momentos:
-            self._avisar(f"H5 {m}: assortatividade com "
+            self._avisar(f"Assortatividade {m}: "
                          f"{self.n_permutacoes} permutações")
             colunas = base.atributos(m)
             modelo = GrafoSimilaridade(
@@ -270,8 +204,13 @@ class Pipeline:
     # G2 · árvore de dependências
     # ------------------------------------------------------------------
     def _executar_g2(self) -> dict:
-        """Kruskal no treino, estabilidade e replicação no teste."""
+        """Monta a árvore no treino e mede sua estabilidade.
+
+        A árvore também é refeita com os alunos do teste, só para medir
+        se ela se repete; nenhuma escolha depende disso.
+        """
         base = self.base
+        par = ArvoreDependencias.ordenar_par
         im_desfecho, saida = {}, {}
         for m in self.momentos:
             self._avisar(f"G2 {m}: árvore máxima de IM (Kruskal) e "
@@ -283,8 +222,6 @@ class Pipeline:
                 self._conferir_kruskal(modelo, r)
             estab = modelo.estabilidade(base, n=self.n_bootstrap_arvore)
 
-            # Replicação: a mesma construção com os alunos do teste.
-            # Só mede; nenhuma escolha depende disto.
             modelo_teste = ArvoreDependencias(m)
             modelo_teste.construir(base, idx=base.idx_teste)
             no_teste = ArvoreDependencias.chaves(
@@ -293,8 +230,8 @@ class Pipeline:
             linhas = [{
                 "u": u, "v": v, "im_bits": im,
                 "toca_desfecho": DESFECHO in (u, v),
-                "estabilidade": estab[ArvoreDependencias._ordenar(u, v)],
-                "no_teste": ArvoreDependencias._ordenar(u, v) in no_teste,
+                "estabilidade": estab[par(u, v)],
+                "no_teste": par(u, v) in no_teste,
             } for u, v, im in r["arestas"]]
             pd.DataFrame(linhas).to_csv(self.saida / f"g2_arvore_{m}.csv",
                                         index=False)
@@ -305,8 +242,7 @@ class Pipeline:
                 "peso_total": r["peso_total"],
                 "vizinhos_desfecho": [
                     {"atributo": v, "im_bits": im,
-                     "estabilidade": estab[
-                         ArvoreDependencias._ordenar(DESFECHO, v)]}
+                     "estabilidade": estab[par(DESFECHO, v)]}
                     for v, im in r["vizinhos_desfecho"]],
                 "sobreposicao_treino_teste": sum(
                     linha["no_teste"] for linha in linhas) / len(linhas),
@@ -320,14 +256,7 @@ class Pipeline:
     # G3 · DAG de trajetórias
     # ------------------------------------------------------------------
     def _executar_g3(self) -> dict:
-        """Roda o G3 em cada momento, se ``DagTrajetorias`` existir.
-
-        Supõe ``DagTrajetorias(momento)`` e, em ``executar()``, a chave
-        opcional ``previsoes`` (``{aluno: bool}`` do teste), como no G1.
-        """
-        if DagTrajetorias is None:
-            self._avisar("G3: dag_trajetorias.py ainda não implementado")
-            return {"status": "não implementado"}
+        """Monta o DAG, acha as trajetórias e classifica o teste."""
         base = self.base
         y_teste = base.y(base.idx_teste)
         previsoes = pd.DataFrame({"aluno": base.idx_teste,
@@ -336,34 +265,24 @@ class Pipeline:
         for m in self.momentos:
             self._avisar(f"G3 {m}: DAG de trajetórias (Kahn + "
                          "Bellman-Ford)")
-            try:
-                modelo = DagTrajetorias(m)
-                modelo.construir(base)
-                r = modelo.executar()
-            except (TypeError, NotImplementedError) as erro:
-                saida[m] = {"status": f"erro: {erro}"}
-                continue
-            if self.verificar and modelo.grafo is not None:
+            modelo = DagTrajetorias(m)
+            modelo.construir(base)
+            r = modelo.executar()
+            if self.verificar:
                 self._conferir_dag(modelo)
-            # Risco e previsão por aluno vão para o CSV, não para o JSON.
+            # Previsão e risco por aluno vão para o CSV, não para o JSON.
             resumo = {c: v for c, v in r.items()
                       if c not in ("previsoes", "risco")}
-            if "previsoes" in r:
-                y_prev = np.array([r["previsoes"][i]
-                                   for i in base.idx_teste])
-                previsoes[m] = y_prev
-                if "risco" in r:
-                    previsoes[f"risco_{m}"] = [r["risco"][i]
-                                               for i in base.idx_teste]
-                resumo["teste"] = self.metricas(y_teste, y_prev)
-                metricas.append({"momento": m, "metodo": "caminho_dag",
-                                 **resumo["teste"]})
+            y_prev = np.array([r["previsoes"][i] for i in base.idx_teste])
+            previsoes[m] = y_prev
+            previsoes[f"risco_{m}"] = [r["risco"][i] for i in base.idx_teste]
+            resumo["teste"] = Avaliador.metricas(y_teste, y_prev)
+            metricas.append({"momento": m, "metodo": "caminho_dag",
+                             **resumo["teste"]})
             saida[m] = resumo
-        if metricas:
-            previsoes.to_csv(self.saida / "g3_previsoes_teste.csv",
-                             index=False)
-            pd.DataFrame(metricas).to_csv(
-                self.saida / "g3_metricas_teste.csv", index=False)
+        previsoes.to_csv(self.saida / "g3_previsoes_teste.csv", index=False)
+        pd.DataFrame(metricas).to_csv(self.saida / "g3_metricas_teste.csv",
+                                      index=False)
         return saida
 
     # ------------------------------------------------------------------
@@ -402,46 +321,14 @@ class Pipeline:
         return resumo
 
     # ------------------------------------------------------------------
-    # Métricas
-    # ------------------------------------------------------------------
-    @staticmethod
-    def metricas(y_real: np.ndarray, y_prev: np.ndarray) -> dict:
-        """Métricas de classificação; evasão (True) é a classe positiva.
-
-        Acurácia balanceada = (recall da evasão + especificidade) / 2,
-        a métrica principal (a acurácia simples premia "sempre forma").
-        """
-        y_real = np.asarray(y_real, dtype=bool)
-        y_prev = np.asarray(y_prev, dtype=bool)
-        vp = int((y_real & y_prev).sum())
-        fp = int((~y_real & y_prev).sum())
-        fn = int((y_real & ~y_prev).sum())
-        vn = int((~y_real & ~y_prev).sum())
-        recall = vp / (vp + fn) if vp + fn else 0.0
-        especificidade = vn / (vn + fp) if vn + fp else 0.0
-        precisao = vp / (vp + fp) if vp + fp else 0.0
-        f1 = (2 * precisao * recall / (precisao + recall)
-              if precisao + recall else 0.0)
-        return {
-            "acuracia_balanceada": (recall + especificidade) / 2,
-            "recall_evasao": recall,
-            "especificidade": especificidade,
-            "precisao_evasao": precisao,
-            "f1_evasao": f1,
-            "acuracia": (vp + vn) / len(y_real),
-            "vp": vp, "fp": fp, "fn": fn, "vn": vn,
-        }
-
-    # ------------------------------------------------------------------
     # Conferências com o networkx (só asserts)
     # ------------------------------------------------------------------
     @staticmethod
     def _conferir_kruskal(modelo: ArvoreDependencias, r: dict) -> None:
-        """Kruskal próprio × ``maximum_spanning_tree`` do networkx.
+        """Compara o nosso Kruskal com o do networkx.
 
-        Empates de IM (os três atributos macro são o mesmo código de
-        coorte) admitem árvores diferentes; a garantia comparada é o
-        peso total máximo e a mesma lista ordenada de pesos.
+        Com pesos empatados há mais de uma árvore válida, então o que se
+        compara é o peso de cada aresta escolhida, não as arestas.
         """
         import networkx as nx
 
@@ -456,7 +343,7 @@ class Pipeline:
     @staticmethod
     def _conferir_assortatividade(modelo: GrafoSimilaridade,
                                   r: float) -> None:
-        """Assortatividade própria × networkx."""
+        """Compara a nossa assortatividade com a do networkx."""
         import networkx as nx
 
         g = modelo.grafo.para_networkx()
@@ -465,15 +352,15 @@ class Pipeline:
         assert abs(r - r_nx) < 1e-6, "assortatividade difere do networkx"
 
     @staticmethod
-    def _conferir_dag(modelo) -> None:
-        """O grafo do G3 precisa ser acíclico (o Kahn garante a ordem)."""
+    def _conferir_dag(modelo: DagTrajetorias) -> None:
+        """Confirma com o networkx que o grafo do G3 não tem ciclo."""
         import networkx as nx
 
         assert nx.is_directed_acyclic_graph(modelo.grafo.para_networkx()), \
             "o grafo do G3 tem ciclo"
 
     # ------------------------------------------------------------------
-    # Resumos e gravação
+    # Registro dos parâmetros e do ambiente
     # ------------------------------------------------------------------
     def _resumo_dados(self) -> dict:
         base = self.base
@@ -487,12 +374,12 @@ class Pipeline:
         }
 
     def _hiperparametros(self) -> dict:
-        """Parâmetros do protocolo (Tab. 2 do relatório)."""
+        """Parâmetros usados em cada etapa."""
         return {
             "divisao": {"treino": 1 - self.base.fracao_teste,
                         "teste": self.base.fracao_teste,
                         "estratificada": True, "semente": SEMENTE},
-            "dobras_cv_treino": DOBRAS_CV,
+            "dobras_cv_treino": DOBRAS,
             "g1": {
                 "k": {m: K_PADRAO[m] for m in self.momentos},
                 "lam": ClassificadorCorteMinimo().lam,
@@ -507,24 +394,61 @@ class Pipeline:
             "g2": {"peso": "informação mútua (bits, treino)",
                    "algoritmo": "Kruskal decrescente + union-find",
                    "bootstrap_estabilidade": self.n_bootstrap_arvore},
-            "g3": self._hiperparametros_g3(),
+            "g3": {
+                "camadas_por_momento": {m: CAMADAS_POR_MOMENTO[m]
+                                        for m in self.momentos},
+                "min_suporte": MIN_SUPORTE,
+                "suavizacao_laplace": SUAVIZACAO,
+                "peso_bellman_ford": "-ln(taxa de evasão do arco)",
+                "limiar": "taxa de evasão do treino",
+            },
             "avaliacao": {"bootstrap_ic95": N_BOOTSTRAP_IC,
-                          "splits_robustez": N_SPLITS_ROBUSTEZ},
+                          "splits_robustez": N_SPLITS},
         }
 
-    def _hiperparametros_g3(self) -> dict | None:
-        """Parâmetros do DAG de trajetórias, se o G3 existir."""
-        if DagTrajetorias is None:
-            return None
+    @staticmethod
+    def ambiente() -> dict:
+        """Versões, sistema e hardware (sem nome de usuário ou máquina)."""
+        bibliotecas = {}
+        for nome in BIBLIOTECAS:
+            try:
+                bibliotecas[nome] = metadata.version(nome)
+            except metadata.PackageNotFoundError:
+                bibliotecas[nome] = None
         return {
-            "camadas_por_momento": {m: CAMADAS_POR_MOMENTO[m]
-                                    for m in self.momentos},
-            "min_suporte": MIN_SUPORTE,
-            "suavizacao_laplace": SUAVIZACAO,
-            "peso_bellman_ford": "-ln(taxa de evasão do arco)",
-            "limiar": "taxa de evasão do treino",
+            "python": platform.python_version(),
+            "bibliotecas": bibliotecas,
+            "sistema": f"{platform.system()} {platform.release()}",
+            "processador": Pipeline._processador(),
+            "nucleos_logicos": os.cpu_count(),
+            "memoria_gb": Pipeline._memoria_gb(),
         }
 
+    @staticmethod
+    def _processador() -> str:
+        """Modelo da CPU (lido de ``/proc/cpuinfo`` no Linux)."""
+        try:
+            with open("/proc/cpuinfo", encoding="utf-8") as arquivo:
+                for linha in arquivo:
+                    if linha.startswith("model name"):
+                        return linha.split(":", 1)[1].strip()
+        except OSError:
+            pass
+        return platform.processor() or platform.machine()
+
+    @staticmethod
+    def _memoria_gb() -> float | None:
+        """Memória RAM total em GB, quando o sistema informa."""
+        try:
+            paginas = os.sysconf("SC_PHYS_PAGES")
+            tamanho = os.sysconf("SC_PAGE_SIZE")
+        except (AttributeError, ValueError, OSError):
+            return None
+        return round(paginas * tamanho / 1024 ** 3, 1)
+
+    # ------------------------------------------------------------------
+    # Gravação
+    # ------------------------------------------------------------------
     def _gravar_split(self) -> None:
         base = self.base
         split = pd.DataFrame({
@@ -551,9 +475,6 @@ class Pipeline:
         if isinstance(valor, float):
             return round(valor, 6)
         return valor
-
-    def _avisar(self, mensagem: str) -> None:
-        self._progresso(mensagem)
 
 
 def main() -> None:
