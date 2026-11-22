@@ -27,7 +27,8 @@ src/
 ├── arvore_dependencias.py   Kruskal + union-find, árvore máxima de IM (G2)              (Carlos)
 ├── dag_trajetorias.py       DAG, Kahn, Bellman-Ford (G3)                                (Carlos)
 ├── avaliacao.py             CV, teste, bootstrap, McNemar + Holm, ablação               (Rafael)
-├── figuras.py               Figs. 3–5 em PDF                                            (Rafael)
+├── fatores.py               lift treino × teste, replicação das direções, IM (H1, H2)   (Rafael)
+├── figuras.py               Figs. 3–5 em PDF → relatorio/figs/                          (Rafael)
 └── main.py                  pipeline completo → outputs/                               (Carlos)
 outputs/                     resultados (json/csv) e figuras gerados pelo pipeline
 docs/                        esta documentação e os planos
@@ -155,8 +156,14 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 | `avaliacao_robustez.csv` | 10 divisões 80/20: média, dp e acurácias | Tab. 3 |
 | `avaliacao_previsoes.csv` | previsão de cada método para cada aluno do teste | conferência |
 | `resultados.json` | tudo acima, mais fluxo, caminhos aumentantes e pesos do G1 | relatório e slides |
+| `fatores_lift.csv` | 27 fatores da Fig. 3: n, taxa e lift no treino e no teste, p de Fisher e q (BH) no treino | **Fig. 3**, H2 |
+| `fatores_faixas.csv` | lift de todas as faixas de todos os atributos (cortes do treino) | H2 |
+| `fatores_im.csv` | IM com o desfecho por atributo, no treino e no teste | H1, H2 |
+| `fatores_replicacao.json` | % das faixas significativas com a mesma direção no teste, % de todas, Spearman da IM, topo 10 em comum | H2 |
 
-`python src/main.py --rapido` pula a ablação, o backward e a robustez (cerca de 3 min). A execução completa leva cerca de 30 min.
+Os arquivos `fatores_*` e as figuras são gravados por `python src/figuras.py`, que lê o resto de `outputs/` (rode o `main.py` antes).
+
+`python src/main.py --rapido` pula a ablação, o backward e a robustez (cerca de 3 min). A execução completa leva cerca de 2h10 (o backward é a parte lenta).
 
 O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A integração supõe `DagTrajetorias(momento)` e uma chave opcional `previsoes` no `executar()`, como no G1. Se a assinatura for outra, combine com o Carlos.
 
@@ -181,6 +188,10 @@ O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A i
 - `RegressaoLogisticaReferencia`: one-hot nas nominais, padronização nas numéricas, indicador de ausente e classes balanceadas. É só uma régua externa.
 - A família do McNemar tem 6 testes: corte × regra e corte × DAG, em T0, T1 e T2. A AUC do corte mínimo continua sem nota contínua (pendente).
 
+**Fatores (`fatores.py`).** `AnaliseFatores(min_teste=20, alfa=0.05).executar(base)` devolve `lift` (27 fatores da Fig. 3, mesmas definições e mesmos lifts do plano v2), `faixas`, `im` e `replicacao`. Faixas e limiares vêm só do treino (mesmas regras da IM: faixas do DAG nas taxas, nominais raras em "outros", quartis nas numéricas); o teste só mede os mesmos grupos. Significância no treino por Fisher exato com Benjamini-Hochberg. Resultado atual: 95,8% das 95 faixas significativas mantêm a direção no teste (89,3% das 169 avaliadas), Spearman da IM 0,946, 9 do topo 10 em comum. O oficial (`analise_v2`) dizia 96,2%, 88,1%, 0,958 e 8 de 10; a diferença vem da definição da família de faixas, que o `analise_v2` não documenta.
+
+**Figuras (`figuras.py`).** `GeradorFiguras(entrada="outputs", destino="relatorio/figs").gerar_todas()` grava `fig-lift.pdf` (Fig. 3, largura de coluna), `fig-ablacao.pdf` (Fig. 4, coluna) e `fig-arvore.pdf` (Fig. 5, árvore de T1 para `figure*`). A árvore usa layout próprio em camadas (profundidade a partir do Desfecho), sem networkx.
+
 ## Padrões de código
 
 **PEP 8 sempre.** 4 espaços de indentação, linhas de até 79 caracteres, `snake_case` para funções, métodos e variáveis, `CamelCase` para classes, `MAIUSCULAS` para constantes, imports no topo agrupados em padrão, terceiros e locais.
@@ -197,6 +208,7 @@ O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A i
 | `arvore_dependencias.py` | `ArvoreDependencias(ModeloGrafo)` | Kruskal com union-find sobre a informação mútua |
 | `dag_trajetorias.py` | `DagTrajetorias(ModeloGrafo)` | Monta o DAG, ordena com Kahn e busca caminhos com Bellman-Ford |
 | `avaliacao.py` | `Avaliador` | CV, teste, bootstrap, McNemar com Holm, ablação |
+| `fatores.py` | `AnaliseFatores` | Lift treino × teste, replicação das direções e ranking de IM |
 | `figuras.py` | `GeradorFiguras` | Figuras do relatório em PDF |
 | `main.py` | `Pipeline` | Orquestra as classes e grava em `outputs/` |
 
@@ -212,6 +224,7 @@ Métodos auxiliares internos começam com `_` (ex.: `_bfs`).
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python src/main.py        # gera outputs/
+python src/figuras.py     # fatores_* em outputs/ e Figs. 3–5 em relatorio/figs/
 ```
 
 ## Fluxo de git

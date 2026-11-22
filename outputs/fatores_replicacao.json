@@ -1,0 +1,11 @@
+{
+  "faixas_significativas": 95,
+  "mesma_direcao_significativas": 0.9578947368421052,
+  "faixas_avaliadas": 169,
+  "mesma_direcao_todas": 0.893491124260355,
+  "spearman_im": 0.9457551170265128,
+  "topo_im_em_comum": 9,
+  "topo": 10,
+  "min_teste": 20,
+  "alfa": 0.05
+}
