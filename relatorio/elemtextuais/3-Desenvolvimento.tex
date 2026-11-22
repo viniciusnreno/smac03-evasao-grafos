@@ -33,31 +33,112 @@ A aresta $(i,j)$ existe se $j$ está entre os $k$ vizinhos de maior $R_{ij}$ de 
 
 \textbf{Modelo 2 -- Rede de Fatores.} Parte-se do grafo bipartido estudante--fator e projeta-se sobre os fatores. $G_2=(F\cup D, E_2, w)$, em que $F$ são os fatores com suporte $\geq 40$ e $D=\{$Evasão, Matriculado, Graduado$\}$ são nós de desfecho. Há aresta entre $a$ e $b$ (de atributos distintos) se co-ocorrem em $\geq 40$ estudantes e $\mathrm{lift}(a,b)\geq 1{,}15$, com $w=\mathrm{lift}$. Assim, a vizinhança de ``Evasão'' é a constelação de fatores sobre-representados entre os evadidos, e as arestas fator--fator mostram como as condições se entrelaçam.
 
+
+% ======================================================================
+% 3.2 Método de Solução (Carlos). Números: outputs/resultados.json e
+% outputs/hiperparametros.json, gerados por src/main.py.
+% Fig. 2: relatorio/figs/gerar_fig_protocolo.py -> figs/fig-protocolo.pdf
+% ======================================================================
 \subsection{Método de Solução}
 \label{ssec:solucao}
 
-O protótipo foi implementado em Python~3.12 com NetworkX \citep{hagberg2008}, NumPy, pandas e scikit-learn, em quatro módulos: \texttt{preprocess} (curadoria), \texttt{graphs} (Modelos 1 e 2), \texttt{analysis} (métricas e validação) e \texttt{plots}. Um explorador interativo permite consultar um estudante, sua comunidade, seus vizinhos e seu escore de risco. A construção de $G_1$ (Algoritmo~\ref{alg-knn}) é vetorizada em blocos de 512 linhas, o que evita materializar a matriz $|V|^2$ completa; a execução completa leva cerca de 4 minutos em um notebook.
+% Palavras-chave dos algoritmos em português (o algorithm2e do template
+% foi carregado sem opção de idioma). Vale só dentro de cada algoritmo.
+\SetAlgorithmName{Algoritmo}{algoritmo}{Lista de algoritmos}
+\providecommand{\algportugues}{%
+  \SetKwInput{KwData}{Entrada}\SetKwInput{KwResult}{Saída}%
+  \SetKw{KwRet}{devolva}\SetKw{KwPare}{pare}%
+  \SetKwFor{While}{enquanto}{faça}{fim}%
+  \SetKwFor{ForEach}{para cada}{faça}{fim}%
+  \SetKwIF{If}{ElseIf}{Else}{se}{então}{senão se}{senão}{fim}}
+
+
+O protótipo foi implementado em Python, com uma classe por módulo. Os três modelos herdam de uma interface comum (construir o grafo, executar o algoritmo e destacar o resultado), de modo que o mesmo núcleo alimenta o \textit{pipeline} de experimentos e a demonstração. Os algoritmos de grafo (Edmonds--Karp, busca em largura, Kruskal com \textit{union-find}, Kahn e Bellman-Ford) foram implementados pelos autores; a NetworkX \citep{hagberg2008} é usada apenas em asserções que conferem os resultados. Código e resultados estão em \url{https://github.com/viniciusnreno/smac03-evasao-grafos}.
+
+\textbf{Protocolo.} A Figura~\ref{fig:protocolo} mostra as etapas do trabalho, organizadas segundo o CRISP-NET. Os 3.630 alunos com desfecho são divididos em 2.904 de treino e 726 de teste, de forma estratificada e com semente fixa. Toda escolha (faixas, pesos dos atributos, $k$, $\lambda$ e limiares) é feita só no treino, por validação cruzada estratificada de 5 dobras. O teste é usado uma única vez, ao final, com a acurácia balanceada como métrica principal, intervalo de confiança de 95\% por \textit{bootstrap}, teste de McNemar exato com correção de Holm e 10 divisões adicionais para robustez. A Tabela~\ref{tab:hiper} reúne os parâmetros.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=\columnwidth]{figs/fig-protocolo.pdf}
+\caption{Diagrama operacional do trabalho segundo o CRISP-NET. As escolhas de parâmetros (etapa 5) usam só o treino, e o teste é usado uma única vez (etapa 8).}
+\label{fig:protocolo}
+\end{figure}
+
+\textbf{G1: corte mínimo.} A super-fonte $S$ liga-se aos evadidos do treino e o super-sumidouro $T$ aos formados, com capacidade infinita, e as arestas do kNN têm capacidade $c(i,j)=1-d(i,j)$ \citep{blum2001}. Cada aluno $u$ do teste recebe ainda os arcos $S\to u$ e $u\to T$, de capacidades $\lambda(1-p)$ e $\lambda p$, em que $p$ é a taxa de evasão do treino. Como $p<0{,}5$, esse viés favorece o lado da evasão e compensa o desequilíbrio entre as classes. O Edmonds--Karp (Algoritmo~\ref{alg:ek}) garante o fluxo máximo em $O(VE^2)$. Pelo teorema do fluxo máximo e corte mínimo \citep{cormen2009}, os vértices alcançáveis a partir de $S$ na rede residual final formam o lado $S$ de um corte mínimo, e o aluno do teste desse lado é previsto como evasão. Como um rotulado nunca é separado do terminal ao qual se liga com capacidade infinita, os rotulados são contraídos em $S$ e $T$ antes do fluxo, o que reduz a rede sem alterar o corte. Na divisão oficial, o fluxo máximo exigiu entre 917 e 1.117 caminhos aumentantes.
 
 \begin{algorithm}[ht!]
 \small
-\normalem
-\KwData{atributos curados $X$, pesos $(\alpha,\beta,\gamma)$, $k$}
-\KwResult{$G_1=(V,E,w)$}
-$V\leftarrow$ estudantes; $E\leftarrow\emptyset$\;
-\For{cada bloco $B\subset V$}{
-  $R_B \leftarrow \alpha S^{\mathrm{ACAD}}(B,V)+\beta S^{\mathrm{SOCIO}}(B,V)+\gamma S^{\mathrm{DEMO}}(B,V)$\;
-  $R_B[i,i]\leftarrow -1$ \tcp*{sem laços}
-  \For{$i\in B$}{
-    \For{$j\in \mathrm{top}_k(R_B[i,:])$}{
-       \lIf{$(i,j)\notin E$}{$E\leftarrow E\cup\{(i,j)\}$; $w(i,j)\leftarrow R_{ij}$}
-    }
-  }
+\algportugues
+\KwData{kNN $G=(V,E)$ com $c(i,j)=1-d(i,j)$; treino $L$ com rótulos $y$; teste $U$; viés $\lambda$}
+\KwResult{previsão $\hat{y}_u$ para cada $u\in U$}
+criar a super-fonte $S$ e o super-sumidouro $T$\;
+contrair em $S$ os evadidos de $L$ e em $T$ os formados de $L$, somando capacidades paralelas \tcp*{$\equiv c=\infty$}
+$p \leftarrow$ taxa de evasão em $L$\;
+\ForEach{$u\in U$}{
+  $c(S,u) \mathrel{+}= \lambda(1-p)$; \quad $c(u,T) \mathrel{+}= \lambda p$\;
 }
-\Return{$G_1$}
-\caption{Construção da rede de similaridade}
-\label{alg-knn}
+$f \leftarrow 0$\;
+\While{existe caminho $P$ de $S$ a $T$ na rede residual (BFS)}{
+  $\Delta \leftarrow \min_{(a,b)\in P} c_f(a,b)$\;
+  aumentar o fluxo em $\Delta$ ao longo de $P$; $f \leftarrow f+\Delta$\;
+}
+$A \leftarrow$ vértices alcançáveis a partir de $S$ na rede residual (BFS)\;
+\ForEach{$u\in U$}{
+  \leIf{$u\in A$}{$\hat{y}_u \leftarrow$ evasão}{$\hat{y}_u \leftarrow$ formatura}
+}
+\KwRet{$\hat{y}$}\;
+\caption{Classificação por corte mínimo (Edmonds--Karp)}
+\label{alg:ek}
 \end{algorithm}
 
-\textbf{Análises.} Sobre $G_1$: (\textit{i}) métricas estruturais, assortatividade e matriz de mistura pelo desfecho (H1); (\textit{ii}) comunidades por Louvain, Fast Greedy e Label Propagation, comparadas por modularidade $Q$, porcentagem de arestas intercomunidades e NMI/ARI em relação ao desfecho, e caracterização das comunidades pelos fatores com frequência local $\geq 50\%$ e lift $\geq 1{,}2$ (H2); (\textit{iii}) \textit{pares divergentes}: em $G_1^{\mathrm{ing}}$, pares com similaridade de ingresso acima do 3º quartil e desfechos Evasão$\times$Graduado são contrastados com pares Graduado$\times$Graduado igualmente similares, para medir quais atributos (inclusive os de trajetória, ausentes de $G_1^{\mathrm{ing}}$) mais diferem; (\textit{iv}) \textit{escore de risco relacional} (H3) por voto ponderado dos vizinhos e por propagação de rótulos \citep{zhou2004} ($\alpha=0{,}8$), em validação cruzada estratificada de 5 partições. Em cada partição, os rótulos do teste são ocultados e os escores são comparados, pela AUC-ROC e pela precisão nos 20\% de maior risco, com a regressão logística sobre os 77 fatores, com o melhor atributo isolado e com um modelo híbrido (logística + voto dos vizinhos). Sobre $G_2$: centralidade (força, intermediação e PageRank), comunidades Louvain, vizinhança do nó Evasão e \textit{sinergia} entre pares de fatores, definida como a taxa de evasão do par menos a maior taxa individual (H4).
+\textbf{G2: árvore de dependências.} Cada atributo discretizado e o desfecho são vértices de um grafo completo, em que o peso de $\{a,b\}$ é a informação mútua
+$I(a;b)=\sum_{x,z} p(x,z)\log_2\frac{p(x,z)}{p(x)\,p(z)}$,
+calculada no treino, em que $p(x,z)$ é a fração de alunos com $a=x$ e $b=z$. $I=0$ indica independência. O Kruskal em ordem decrescente de peso, com \textit{union-find} (Algoritmo~\ref{alg:kruskal}), garante uma árvore geradora de peso máximo, a árvore de \citet{chow1968}. Os vizinhos do desfecho nessa árvore são os fatores com informação própria sobre a evasão; os demais chegam a ele através de outros fatores. A estabilidade de cada aresta é medida em 100 reamostragens do treino. Pesos exatamente iguais (os três indicadores macroeconômicos codificam a mesma coorte) admitem árvores distintas de mesmo peso; o empate é desfeito pelo nome do atributo.
 
-\textbf{Organização do grupo.} Coordenador: [Integrante A] (cronograma, diretrizes, repositório e relatório). Modeladores: [B] (delimitação do problema, modelagem formal) e [C] (curadoria do dataset, interpretação). Desenvolvedores: [D] (arquitetura, núcleo algorítmico) e [E] (testes, validação quantitativa, demonstração). Cada atividade crítica teve um responsável principal e um corresponsável, conforme a Tabela~1 das diretrizes. Código, figuras e slides estão em \url{https://github.com/viniciusnreno/smac03-evasao-grafos}.
+\begin{algorithm}[ht!]
+\small
+\algportugues
+\KwData{atributos $X_1,\dots,X_m$ do momento e desfecho $Y$, discretizados em faixas do treino}
+\KwResult{árvore geradora máxima $\mathcal{T}$}
+$V \leftarrow \{X_1,\dots,X_m,Y\}$; \quad $w(a,b) \leftarrow I(a;b)$ para todo par $\{a,b\}\subset V$\;
+ordenar os pares por $w$ \textbf{decrescente} \tcp*{empate: nome}
+$\mathcal{T} \leftarrow \emptyset$; \textsc{Make-Set}$(v)$ para todo $v\in V$\;
+\ForEach{$\{a,b\}$ na ordem}{
+  \If{\textsc{Find-Set}$(a) \neq$ \textsc{Find-Set}$(b)$}{
+    $\mathcal{T} \leftarrow \mathcal{T} \cup \{\{a,b\}\}$; \textsc{Union}$(a,b)$\;
+    \lIf{$|\mathcal{T}| = |V|-1$}{\KwPare}
+  }
+}
+\KwRet{$\mathcal{T}$}\;
+\caption{Árvore geradora máxima de informação mútua (Kruskal)}
+\label{alg:kruskal}
+\end{algorithm}
+
+\textbf{G3: trajetórias.} A ordenação de Kahn garante uma ordem topológica do DAG (ou acusa ciclo) em $O(V+E)$. O Bellman-Ford, com peso $-\ln$ da taxa de evasão de cada arco (suavizada por Laplace), garante o caminho de menor custo, isto é, o de maior produto de taxas: a trajetória de maior risco. Como preditor, o risco do aluno é a taxa de evasão, no treino, do trecho de caminho já conhecido no momento.
+
+\begin{table}[ht!]
+\centering
+\small
+\caption{Parâmetros do protocolo e dos modelos, escolhidos só no treino.}
+\label{tab:hiper}
+\begin{tabular}{@{}l c p{3.3cm}@{}}
+\hline
+\textbf{Parâmetro} & \textbf{Símb.} & \textbf{Valor} \\ \hline
+Divisão treino/teste & -- & 80/20, estratificada, semente 42 \\
+Seleção de parâmetros & -- & CV de 5 dobras no treino \\
+Vizinhos por aluno (G1) & $k$ & 25 (T0, T1); 40 (T2) \\
+Peso do atributo (G1) & $w_a$ & informação mútua com o desfecho \\
+Capacidade (G1) & $c(i,j)$ & $1-d(i,j)$ (Gower) \\
+Viés do corte (G1) & $\lambda$ & 1,0 \\
+Peso da aresta (G2) & $w(a,b)$ & $I(a;b)$, em bits \\
+Estabilidade (G2) & -- & 100 reamostragens \\
+Camadas do preditor (G3) & -- & 2 (T0), 3 (T1), 4 (T2) \\
+Suporte mínimo (G3) & -- & 20 alunos \\
+Limiar de risco (G3) & -- & taxa de evasão do treino \\
+Assortatividade & $k$ & 10, pesos iguais, 200 permutações \\
+Intervalo de confiança & -- & \textit{bootstrap}, 1.000 reamostras \\
+Robustez & -- & 10 divisões 80/20 \\ \hline
+\end{tabular}
+\end{table}
+
+\textbf{Ambiente de testes.} Python 3.14.4, com NumPy 2.5.4, pandas 3.1.0, scikit-learn 1.9.1, SciPy 1.18.1, NetworkX 3.7 e Matplotlib 3.11.2, em Linux 7.0, com processador Intel Core i5-13420H (12 núcleos lógicos) e 6,9~GB de RAM.
