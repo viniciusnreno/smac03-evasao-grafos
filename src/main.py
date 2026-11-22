@@ -15,18 +15,23 @@ grava os resultados em outputs/. Segue o protocolo 80/20 do relatório:
 4. G2: árvore geradora máxima de informação mútua (Kruskal) no treino,
    estabilidade por bootstrap e replicação da árvore no teste (H2).
 5. G3: DAG de trajetórias (Kahn + Bellman-Ford), se já implementado.
-6. Conferências com o networkx (só asserts) e gravação dos arquivos.
+6. Avaliação (``Avaliador``, ``avaliacao.py``): CV no treino, teste
+   com IC por bootstrap, AUC, McNemar com Holm, ablação, eliminação
+   backward e robustez em 10 divisões. O ``Avaliador`` devolve as
+   tabelas e o ``Pipeline`` grava.
+7. Conferências com o networkx (só asserts) e gravação dos arquivos.
 
-CV, bootstrap do IC, McNemar e ablação ficam no ``Avaliador``
-(``avaliacao.py``); as figuras, no ``GeradorFiguras`` (``figuras.py``).
-Ambos leem os arquivos gravados aqui.
+As figuras ficam no ``GeradorFiguras`` (``figuras.py``), que lê os
+arquivos gravados aqui.
 
 Uso::
 
-    python src/main.py
+    python src/main.py            # completo (~30 min)
+    python src/main.py --rapido   # sem ablação, backward e robustez
 """
 
 import json
+import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -35,6 +40,7 @@ import numpy as np
 import pandas as pd
 
 from arvore_dependencias import DESFECHO, N_BOOTSTRAP, ArvoreDependencias
+from avaliacao import Avaliador
 from corte_minimo import ClassificadorCorteMinimo
 from dados import SEMENTE, BaseDeDados
 from grafo_similaridade import K_PADRAO, GrafoSimilaridade
@@ -70,6 +76,8 @@ class Pipeline:
         n_bootstrap_arvore: reamostragens da estabilidade do G2.
         n_permutacoes: permutações do teste de assortatividade.
         verificar: confere G2 e assortatividade com o networkx.
+        avaliacao_completa: inclui ablação, eliminação backward e
+            robustez (as partes demoradas da avaliação).
         progresso: função que recebe mensagens de andamento (``print``
             na linha de comando; a interface gráfica pode passar outra).
     """
@@ -79,12 +87,14 @@ class Pipeline:
                  n_bootstrap_arvore: int = N_BOOTSTRAP,
                  n_permutacoes: int = N_PERMUTACOES,
                  verificar: bool = True,
+                 avaliacao_completa: bool = True,
                  progresso: Callable[[str], None] | None = None) -> None:
         self.saida = Path(saida)
         self.momentos = tuple(momentos)
         self.n_bootstrap_arvore = n_bootstrap_arvore
         self.n_permutacoes = n_permutacoes
         self.verificar = verificar
+        self.avaliacao_completa = avaliacao_completa
         self._progresso = progresso or (lambda _msg: None)
         self.base: BaseDeDados | None = None
         self.resultados: dict = {}
@@ -108,6 +118,7 @@ class Pipeline:
         self.resultados["assortatividade"] = self._assortatividade()
         self.resultados["g2"] = self._executar_g2()
         self.resultados["g3"] = self._executar_g3()
+        self.resultados["avaliacao"] = self._avaliar()
         self.resultados["tempo_s"] = round(time.perf_counter() - inicio, 1)
         self._gravar_json("resultados.json", self.resultados)
         self._gravar_json("hiperparametros.json",
@@ -271,6 +282,41 @@ class Pipeline:
         return saida
 
     # ------------------------------------------------------------------
+    # Avaliação
+    # ------------------------------------------------------------------
+    def _avaliar(self) -> dict:
+        """Roda o ``Avaliador`` e grava as tabelas ``avaliacao_*``."""
+        completa = self.avaliacao_completa
+        r = Avaliador().executar(
+            self.base, self.momentos, ablacao=completa, backward=completa,
+            robustez=completa, progresso=self._avisar)
+        for nome in ("cv", "teste", "mcnemar", "previsoes", "ablacao",
+                     "robustez"):
+            if nome in r:
+                r[nome].to_csv(self.saida / f"avaliacao_{nome}.csv",
+                               index=False)
+        resumo = {
+            "regras_1_variavel": r["regras"],
+            "teste": r["teste"].to_dict(orient="records"),
+            "mcnemar": r["mcnemar"].to_dict(orient="records"),
+            "cv": r["cv"].to_dict(orient="records"),
+        }
+        if "backward" in r:
+            linhas = [{"momento": m, **h} for m, res in r["backward"].items()
+                      for h in res["historico"]]
+            pd.DataFrame(linhas).to_csv(
+                self.saida / "avaliacao_backward.csv", index=False)
+            resumo["backward"] = {
+                m: {"mantidos": res["mantidos"],
+                    "acuracia_cv": res["acuracia_cv"]}
+                for m, res in r["backward"].items()}
+        if "ablacao" in r:
+            resumo["ablacao"] = r["ablacao"].to_dict(orient="records")
+        if "robustez" in r:
+            resumo["robustez"] = r["robustez"].to_dict(orient="records")
+        return resumo
+
+    # ------------------------------------------------------------------
     # Métricas
     # ------------------------------------------------------------------
     @staticmethod
@@ -413,10 +459,14 @@ class Pipeline:
 
 def main() -> None:
     """Ponto de entrada da linha de comando."""
-    resultados = Pipeline(progresso=print).executar()
-    print("\nAcurácia balanceada no teste (corte mínimo):")
-    for m, r in resultados["g1"].items():
-        print(f"  {m}: {r['teste']['acuracia_balanceada']:.3f}")
+    rapido = "--rapido" in sys.argv[1:]
+    resultados = Pipeline(avaliacao_completa=not rapido,
+                          progresso=print).executar()
+    print("\nAcurácia balanceada no teste (IC 95%):")
+    for linha in resultados["avaliacao"]["teste"]:
+        print(f"  {linha['momento']} {linha['metodo']:<20} "
+              f"{linha['acuracia_balanceada']:.3f} "
+              f"({linha['ic_inf']:.3f}–{linha['ic_sup']:.3f})")
 
 
 if __name__ == "__main__":

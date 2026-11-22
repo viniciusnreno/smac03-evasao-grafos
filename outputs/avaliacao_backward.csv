@@ -1,0 +1,94 @@
+momento,atributo,acuracia,removido
+T0,,0.7341132979640278,False
+T0,Educational special needs,0.7341132979640278,True
+T0,International,0.7341132979640278,True
+T0,Nacionality,0.7341132979640278,True
+T0,Daytime/evening attendance,0.7327221120479146,False
+T0,Inflation rate,0.7311571046835429,False
+T0,GDP,0.7326330429120056,False
+T0,Unemployment rate,0.7314926593237324,False
+T0,Marital status,0.7345517366516611,True
+T0,Displaced,0.7370912241671108,True
+T0,Application order,0.7355220577827744,False
+T0,Admission grade,0.7402614143366405,True
+T0,Father's occupation,0.7353340849423,False
+T0,Father's qualification,0.7423080838230283,True
+T0,Previous qualification,0.7353651152890428,False
+T0,Mother's qualification,0.735470589504839,False
+T0,Mother's occupation,0.7410990057601671,False
+T0,Previous qualification (grade),0.7345613973673271,False
+T0,Gender,0.7344949774539019,False
+T0,Debtor,0.7406490320101132,False
+T0,Application mode,0.7236699339859228,False
+T0,Age at enrollment,0.7327206746529127,False
+T0,Scholarship holder,0.7171520112436461,False
+T0,Course,0.7231215150059456,False
+T1,,0.8535072388878465,False
+T1,Curricular units 1st sem (credited),0.8535072388878465,True
+T1,Curricular units 1st sem (without evaluations),0.8535072388878465,True
+T1,Educational special needs,0.8535072388878465,True
+T1,International,0.8535072388878465,True
+T1,Nacionality,0.8535072388878465,True
+T1,Daytime/evening attendance,0.852344827643277,False
+T1,Inflation rate,0.8526570488743207,False
+T1,GDP,0.8511812844988483,False
+T1,Unemployment rate,0.8492743205480954,False
+T1,Marital status,0.8523494921728174,False
+T1,Displaced,0.8526261816191241,False
+T1,Application order,0.8519401624502381,False
+T1,Admission grade,0.8500227375405454,False
+T1,Father's occupation,0.8519136280679964,False
+T1,Father's qualification,0.8525580082396521,False
+T1,Previous qualification,0.8549860673063113,True
+T1,Mother's qualification,0.8527864881774976,False
+T1,Mother's occupation,0.8536945484151504,False
+T1,Previous qualification (grade),0.8533784628978403,False
+T1,Curricular units 1st sem (enrolled),0.8545756056838728,False
+T1,Gender,0.857314285495028,True
+T1,Debtor,0.8521294041206751,False
+T1,Curricular units 1st sem (evaluations),0.8564348287128534,False
+T1,Application mode,0.8651663193484689,True
+T1,Age at enrollment,0.8634323396798136,False
+T1,Scholarship holder,0.8525974251841468,False
+T1,Course,0.8621779530599374,False
+T1,Tuition fees up to date,0.8523820016615449,False
+T1,Curricular units 1st sem (grade),0.8625648074130231,False
+T1,Curricular units 1st sem (approved),0.8637283505574519,False
+T2,,0.8760989061054806,False
+T2,Curricular units 1st sem (credited),0.8760989061054806,True
+T2,Curricular units 1st sem (without evaluations),0.8760989061054806,True
+T2,Curricular units 2nd sem (credited),0.8760989061054806,True
+T2,Educational special needs,0.8760989061054806,True
+T2,International,0.8760989061054806,True
+T2,Nacionality,0.8760989061054806,True
+T2,Daytime/evening attendance,0.8760989061054806,True
+T2,Inflation rate,0.8758164202297746,False
+T2,GDP,0.8767953862333064,True
+T2,Unemployment rate,0.8749353629610519,False
+T2,Marital status,0.8750664027507765,False
+T2,Displaced,0.8768207887156889,True
+T2,Curricular units 2nd sem (without evaluations),0.8768207887156889,True
+T2,Application order,0.8755339343540683,False
+T2,Admission grade,0.8752495163352287,False
+T2,Father's occupation,0.8754984025693313,False
+T2,Father's qualification,0.8770436091542383,True
+T2,Previous qualification,0.8754434016617149,False
+T2,Mother's qualification,0.877262917836598,True
+T2,Mother's occupation,0.8757832891748594,False
+T2,Previous qualification (grade),0.8750922738198478,False
+T2,Curricular units 1st sem (enrolled),0.8766963455986376,False
+T2,Gender,0.8740879053339332,False
+T2,Curricular units 2nd sem (evaluations),0.8762265501956277,False
+T2,Debtor,0.8723941219795552,False
+T2,Curricular units 2nd sem (enrolled),0.8771368742329988,False
+T2,Curricular units 1st sem (evaluations),0.8777034464709592,True
+T2,Application mode,0.8774240246382453,False
+T2,Age at enrollment,0.8764157918660646,False
+T2,Scholarship holder,0.8680660064179102,False
+T2,Course,0.873837418613283,False
+T2,Tuition fees up to date,0.8663936243295447,False
+T2,Curricular units 1st sem (grade),0.8766998782283189,False
+T2,Curricular units 2nd sem (grade),0.8763853931975566,False
+T2,Curricular units 1st sem (approved),0.875564801609265,False
+T2,taxa_aprov_s1,0.8736789072679393,False
+T2,Curricular units 2nd sem (approved),0.8779867325899394,True
