@@ -50,11 +50,17 @@ class EdmondsKarp:
     Aresta não dirigida de capacidade c vira dois arcos de capacidade c.
     A rede recebida não é alterada: o algoritmo trabalha numa rede
     residual própria.
+
+    Com ``registrar=True``, guarda em ``historico`` cada caminho
+    aumentante (lista de arcos) e o gargalo dele, na ordem em que a BFS
+    os encontrou. Serve à demonstração passo a passo da interface.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, registrar: bool = False) -> None:
+        self.registrar = registrar
         self.valor: float | None = None
         self.num_caminhos = 0
+        self.historico: list[dict] = []
         self._residual: dict[Hashable, dict[Hashable, float]] = {}
         self._s: Hashable = None
 
@@ -69,6 +75,7 @@ class EdmondsKarp:
         self._residual = self._montar_residual(rede)
         self._s = s
         self.num_caminhos = 0
+        self.historico = []
         fluxo = 0.0
 
         while (pais := self._bfs(s, t)) is not None:
@@ -82,6 +89,9 @@ class EdmondsKarp:
                 self._residual[v][u] += gargalo
             fluxo += gargalo
             self.num_caminhos += 1
+            if self.registrar:
+                self.historico.append(
+                    {"caminho": caminho, "gargalo": gargalo})
 
         self.valor = fluxo
         return fluxo
@@ -162,13 +172,19 @@ class ClassificadorCorteMinimo:
             o corte e reduz muito a rede (3.630 alunos com k = 25: 728
             vértices, ~0,2 s). ``contrair=False`` serve só para
             verificação: na escala real leva vários minutos.
+        registrar: guarda a ``rede`` de fluxo montada e o ``historico``
+            de caminhos aumentantes do ``EdmondsKarp`` (demonstração).
     """
 
-    def __init__(self, lam: float = 1.0, contrair: bool = True) -> None:
+    def __init__(self, lam: float = 1.0, contrair: bool = True,
+                 registrar: bool = False) -> None:
         if lam < 0:
             raise ValueError("lam deve ser não negativo")
         self.lam = lam
         self.contrair = contrair
+        self.registrar = registrar
+        self.rede: Grafo | None = None
+        self.historico: list[dict] = []
         self.fluxo: float | None = None
         self.num_caminhos = 0
         self.lado_evasao: set[Hashable] = set()
@@ -187,9 +203,12 @@ class ClassificadorCorteMinimo:
         self._validar(grafo, rotulos_treino, idx_teste)
 
         rede = self._montar_rede(grafo, rotulos_treino, idx_teste)
-        ek = EdmondsKarp()
+        ek = EdmondsKarp(registrar=self.registrar)
         self.fluxo = ek.fluxo_maximo(rede, FONTE, SUMIDOURO)
         self.num_caminhos = ek.num_caminhos
+        if self.registrar:
+            self.rede = rede
+            self.historico = ek.historico
         lado_s = ek.lado_da_fonte()
 
         self._grafo = grafo

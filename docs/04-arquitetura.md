@@ -5,6 +5,8 @@
 | Item | Versão / uso |
 |---|---|
 | Python | 3.12 |
+| streamlit | interface gráfica (bônus), `src/app.py` |
+| pyvis | só o vis-network que vem empacotado nele, embutido no HTML da interface (funciona sem internet) |
 | pandas, numpy | dados e matrizes |
 | networkx | **somente verificação** (asserts contra as implementações próprias) |
 | scipy | testes estatísticos (McNemar, bootstrap, Spearman) |
@@ -29,7 +31,10 @@ src/
 ├── avaliacao.py             CV, teste, bootstrap, McNemar + Holm, ablação               (Rafael)
 ├── fatores.py               lift treino × teste, replicação das direções, IM (H1, H2)   (Rafael)
 ├── figuras.py               Figs. 3–5 em PDF → relatorio/figs/                          (Rafael)
-└── main.py                  pipeline completo → outputs/                               (Carlos)
+├── main.py                  pipeline completo → outputs/                               (Carlos)
+├── app.py                   interface gráfica (Streamlit), só a tela                    (Rafael)
+├── visual.py                grafos → vértices/arestas desenháveis e HTML (vis-network)  (Rafael)
+└── passo_a_passo.py         passos do Edmonds–Karp e do Kruskal para a interface        (Rafael)
 outputs/                     resultados (json/csv) e figuras gerados pelo pipeline
 docs/                        esta documentação e os planos
 relatorio/                   projeto LaTeX (Nathan organiza)
@@ -108,8 +113,8 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 ```
 
 - `corte_minimo.py` tem duas classes de algoritmo, que não são modelos:
-  - `EdmondsKarp`: fluxo máximo genérico. `fluxo_maximo(rede, s, t) -> float` e `lado_da_fonte() -> set` (corte mínimo por BFS no residual). Não altera a rede recebida.
-  - `ClassificadorCorteMinimo(lam=1.0, contrair=True)`: monta a rede do G1 com S e T, chama o `EdmondsKarp` e traduz o corte em previsões. Depois de `classificar`, expõe `fluxo`, `num_caminhos`, `lado_evasao` e `arestas_cortadas()` (para `destaques`).
+  - `EdmondsKarp(registrar=False)`: fluxo máximo genérico. `fluxo_maximo(rede, s, t) -> float` e `lado_da_fonte() -> set` (corte mínimo por BFS no residual). Não altera a rede recebida. Com `registrar=True`, guarda em `historico` cada caminho aumentante e o gargalo (interface).
+  - `ClassificadorCorteMinimo(lam=1.0, contrair=True, registrar=False)`: monta a rede do G1 com S e T, chama o `EdmondsKarp` e traduz o corte em previsões. Depois de `classificar`, expõe `fluxo`, `num_caminhos`, `lado_evasao` e `arestas_cortadas()` (para `destaques`); com `registrar=True`, também `rede` e `historico`.
 - `GrafoSimilaridade.executar()` usa o `ClassificadorCorteMinimo`.
 - **`GrafoSimilaridade(momento, k, pesos=None, lam=1.0, incluir_derivados=True, excluir=())`**:
   - `construir(base, idx_treino=None, idx_teste=None)`: por padrão usa a divisão oficial; na CV, passe as dobras. Os vértices são treino + teste; pesos e amplitudes vêm só de `idx_treino`, e os rótulos do teste nunca são lidos.
@@ -211,10 +216,21 @@ O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A i
 | `fatores.py` | `AnaliseFatores` | Lift treino × teste, replicação das direções e ranking de IM |
 | `figuras.py` | `GeradorFiguras` | Figuras do relatório em PDF |
 | `main.py` | `Pipeline` | Orquestra as classes e grava em `outputs/` |
+| `visual.py` | `MontadorVisual` | Converte grafos e destaques em desenho (vis-network) |
+| `passo_a_passo.py` | `DemoEdmondsKarp` e `DemoKruskal` | Passos dos algoritmos para as animações da interface |
+| `app.py` | (funções de página) | Interface Streamlit; só tela, sem cálculo próprio |
 
 Os métodos de `Grafo`, `ModeloGrafo` e da fronteira do G1 estão fixados acima. Os demais métodos ficam a critério do dono do módulo.
 
-**Lógica separada da interface.** As classes devolvem dados; não imprimem, não plotam e não gravam arquivos fora da própria responsabilidade (só `GeradorFiguras` e `Pipeline` escrevem em disco). Assim, a interface gráfica prevista como bônus pode reaproveitar as mesmas classes sem mudar o núcleo. Quando ela existir, ficará em um módulo próprio e o `main.py` poderá abri-la.
+**Lógica separada da interface.** As classes devolvem dados; não imprimem, não plotam e não gravam arquivos fora da própria responsabilidade (só `GeradorFiguras` e `Pipeline` escrevem em disco). Assim, a interface gráfica reaproveita as mesmas classes sem mudar o núcleo.
+
+**Interface gráfica (`app.py`, bônus).** Streamlit com 8 páginas: visão geral (Tab. 3 e McNemar lidos de `outputs/`), G1 (ego-rede de um aluno de teste com o corte), Edmonds–Karp passo a passo, exploração de k e λ, G2 (árvore), Kruskal passo a passo, G3 (DAG com as trajetórias) e simulador de trajetória. Regras:
+
+- Os modelos são refeitos na tela com os hiperparâmetros de `outputs/hiperparametros.json`; um selo confere fluxo, número de arestas, peso da árvore e trajetórias com `resultados.json`. Métricas, IC e p-valores são sempre lidos de `outputs/`.
+- A página de exploração aceita outros k e λ, mas roda numa dobra de validação **do treino** (`Avaliador.particoes`). O teste não é tocado.
+- `DemoEdmondsKarp` sorteia (semente 42) 8 rotulados e 6 "sem rótulo", todos do treino, e usa o `ClassificadorCorteMinimo(contrair=False, registrar=True)`. O histórico de caminhos aumentantes vem do próprio `EdmondsKarp(registrar=True)`.
+- `DemoKruskal` **não altera o Kruskal**: lê a árvore devolvida por `ArvoreDependencias.kruskal`, reconstitui a ordem de exame (IM decrescente, empate pelo nome) e marca cada aresta como aceita se está na árvore. O `UniaoBusca` só acompanha os componentes para colorir o desenho e confere que cada rejeitada fecharia um ciclo.
+- O networkx não é usado na interface; as posições do DAG e do Kruskal são calculadas à mão.
 
 Métodos auxiliares internos começam com `_` (ex.: `_bfs`).
 
@@ -225,6 +241,7 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python src/main.py        # gera outputs/
 python src/figuras.py     # fatores_* em outputs/ e Figs. 3–5 em relatorio/figs/
+streamlit run src/app.py  # interface gráfica (lê outputs/; rode o main.py antes)
 ```
 
 ## Fluxo de git

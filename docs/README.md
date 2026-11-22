@@ -14,6 +14,7 @@ Os arquivos estão em ordem de leitura. Quem chega agora (pessoa ou Claude) deve
 | [estado.md](estado.md) | Estado atual de cada etapa: atualizado antes de cada commit |
 | [glossario.md](glossario.md) | Termos de grafos e de avaliação usados no trabalho |
 | [planos/plano-v3.html](planos/plano-v3.html) | Plano de ação final (fonte destas páginas) |
+| [planos/interface.md](planos/interface.md) | Plano da interface gráfica (Streamlit) |
 | [planos/plano-v2.html](planos/plano-v2.html) | Análise técnica completa, com gráficos interativos (anexo) |
 
 ## Histórico de decisões

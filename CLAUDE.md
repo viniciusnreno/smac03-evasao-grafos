@@ -40,6 +40,7 @@ Edite só os arquivos da pessoa que pediu a tarefa. Para mexer em arquivo de out
 | `src/grafo.py`, `modelo.py` (base comum), `dados.py` | Rafael |
 | `src/grafo_similaridade.py`, `arvore_dependencias.py`, `dag_trajetorias.py`, `main.py` | Carlos |
 | `src/corte_minimo.py`, `avaliacao.py`, `figuras.py` | Rafael |
+| `src/app.py`, `visual.py`, `passo_a_passo.py` (interface) | Rafael |
 | `relatorio/main.tex`, `configuracao.tex`, capa, `referencias.bib`, seções 1, 2 e 5 | Nathan |
 | `relatorio/elemtextuais/3-Desenvolvimento.tex` | 3.1 Vinícius · 3.2 Carlos |
 | `relatorio/elemtextuais/4-Resultados.tex` | Vinícius (texto) e Rafael (figuras e tabela) |
@@ -78,6 +79,7 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 source .venv/bin/activate
 pip install -r requirements.txt
 python src/main.py          # pipeline completo, grava em outputs/
+streamlit run src/app.py    # interface gráfica (bônus), lê outputs/
 ```
 
 ## Padrões de código
