@@ -28,3 +28,4 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | 18 | Slides, vídeo da demonstração e ensaio | Nathan, Carlos, Rafael | Dom 22/11, 18h | pendente | |
 | 19 | Envio do PDF no SIGAA | Nathan | Dom 22/11, 22h | pendente | |
 | 20 | Interface gráfica (Streamlit) para a demonstração | Rafael | Dom 22/11, 16h | concluída | `app.py` (8 páginas), `visual.py` e `passo_a_passo.py`; Edmonds–Karp e Kruskal passo a passo, ego-rede do G1, DAG e simulador; selos conferem com `outputs/`; exploração de k/λ só no treino; Kruskal não alterado. Plano em `docs/planos/interface.md` |
+| 21 | Limpeza de `arvore_dependencias.py` e `main.py` | Carlos | Dom 22/11 | concluída | Docstrings enxutas e sem jargão interno; removidos o código morto do G3 e a cópia de `metricas` (usa `Avaliador.metricas`); `_ordenar` → `ordenar_par`. Saídas de `--rapido` idênticas às de antes |

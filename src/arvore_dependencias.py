@@ -1,34 +1,27 @@
-"""G2: árvore de dependências. Classe: ``ArvoreDependencias(ModeloGrafo)``.
+"""G2: árvore de dependências entre os fatores da evasão.
 
-Responsável: Carlos.
+Cada vértice é um atributo do aluno (bolsa, curso, mensalidade...), mais
+um vértice ``Desfecho``. Todo par de vértices é ligado por uma aresta
+cujo peso é a informação mútua entre os dois: quanto um ajuda a prever
+o outro.
 
-- ``construir``: grafo completo não dirigido cujos vértices são os
-  atributos do momento e o vértice ``Desfecho``; o peso de cada aresta é
-  a informação mútua (IM) entre os dois, calculada só no treino.
-- ``executar``: Kruskal em ordem decrescente de peso com union-find
-  (aula 5). Garante uma árvore geradora de peso **máximo**: liga todos os
-  vértices sem ciclos com a maior IM total possível. É a árvore de Chow e
-  Liu (1968), a melhor aproximação em árvore da distribuição conjunta.
-  Não é caminho mínimo: a árvore não diz nada sobre distâncias.
-- ``destaques``: arestas da árvore e vizinhos diretos do ``Desfecho``
-  (os fatores com informação própria sobre a evasão).
-
-A IM usa as mesmas faixas do G1 (``GrafoSimilaridade.discretizar``):
-taxas de aprovação nas faixas do DAG, nominais raras em "outros",
-numéricas com muitos valores em quartis.
+O Kruskal escolhe, entre todas essas arestas, uma árvore que liga todos
+os vértices sem ciclos e com a maior informação total (árvore de Chow e
+Liu). Os vizinhos do ``Desfecho`` na árvore são os fatores que trazem
+informação própria sobre a evasão, sem passar por outro fator.
 """
 
 from collections.abc import Hashable, Iterable
 
 import numpy as np
 
+from dados import SEMENTE
 from grafo import Grafo
 from grafo_similaridade import GrafoSimilaridade
 from modelo import ModeloGrafo
 
 DESFECHO = "Desfecho"
-SEMENTE = 42
-# Reamostragens do treino para medir a estabilidade das arestas.
+# Reamostragens usadas para medir se a árvore é estável.
 N_BOOTSTRAP = 100
 
 Aresta = tuple[str, str]
@@ -37,8 +30,8 @@ Aresta = tuple[str, str]
 class UniaoBusca:
     """Union-find (conjuntos disjuntos), aula 5.
 
-    União por posto e compressão de caminho: cada operação custa tempo
-    quase constante (função inversa de Ackermann).
+    Diz em tempo quase constante se dois vértices já estão ligados. O
+    Kruskal usa isso para recusar arestas que fechariam ciclo.
     """
 
     def __init__(self, elementos: Iterable[Hashable]) -> None:
@@ -46,7 +39,7 @@ class UniaoBusca:
         self._posto: dict[Hashable, int] = dict.fromkeys(self._pai, 0)
 
     def buscar(self, x: Hashable) -> Hashable:
-        """Representante do conjunto de ``x`` (Find-Set)."""
+        """Representante do conjunto de ``x``."""
         raiz = x
         while self._pai[raiz] != raiz:
             raiz = self._pai[raiz]
@@ -55,10 +48,10 @@ class UniaoBusca:
         return raiz
 
     def unir(self, a: Hashable, b: Hashable) -> bool:
-        """Une os conjuntos de ``a`` e ``b`` (Union).
+        """Une os conjuntos de ``a`` e ``b``.
 
-        Devolve ``False`` se já estavam no mesmo conjunto, ou seja, se a
-        aresta (a, b) fecharia um ciclo.
+        Devolve ``False`` se já estavam juntos, ou seja, se a aresta
+        (a, b) fecharia um ciclo.
         """
         ra, rb = self.buscar(a), self.buscar(b)
         if ra == rb:
@@ -76,13 +69,9 @@ class ArvoreDependencias(ModeloGrafo):
 
     Parâmetros:
         momento: ``"T0"``, ``"T1"`` ou ``"T2"``.
-        incluir_derivados: inclui ``taxa_aprov_s1``/``taxa_aprov_s2``
-            nos momentos em que existem (38 atributos em T2).
-        excluir: atributos a retirar.
-
-    Depois de ``construir`` ficam disponíveis ``grafo`` (completo) e
-    ``im_desfecho_`` (IM de cada atributo com o desfecho). Depois de
-    ``executar``, ``arvore_`` (``Grafo`` só com as arestas da árvore).
+        incluir_derivados: inclui as taxas de aprovação nos momentos em
+            que já existem.
+        excluir: atributos a deixar de fora.
     """
 
     nome = "G2 · Árvore de dependências (Kruskal)"
@@ -106,13 +95,9 @@ class ArvoreDependencias(ModeloGrafo):
     # Interface ModeloGrafo
     # ------------------------------------------------------------------
     def construir(self, base, idx: Iterable[int] | None = None) -> Grafo:
-        """Grafo completo de IM entre atributos e desfecho.
+        """Monta o grafo completo de informação mútua.
 
-        Args:
-            base: ``BaseDeDados``.
-            idx: alunos usados no cálculo da IM; padrão
-                ``base.idx_treino``. Passar o teste só para medir a
-                replicação da árvore, nunca para escolher algo.
+        ``idx`` são os alunos usados no cálculo (padrão: o treino).
         """
         self._idx = list(base.idx_treino if idx is None else idx)
         if not self._idx:
@@ -127,12 +112,7 @@ class ArvoreDependencias(ModeloGrafo):
         return self.grafo
 
     def executar(self) -> dict:
-        """Roda o Kruskal e devolve a árvore e seus destaques.
-
-        Chaves: ``arestas`` (``(u, v, im)`` em ordem decrescente de IM),
-        ``peso_total``, ``vizinhos_desfecho`` (``[(atributo, im)]``),
-        ``im_desfecho``, ``num_vertices`` e ``num_arestas_completo``.
-        """
+        """Roda o Kruskal e devolve as arestas da árvore e seu peso."""
         if self.grafo is None:
             raise RuntimeError("chame construir antes de executar")
         self._arestas = self.kruskal(self.grafo)
@@ -170,18 +150,17 @@ class ArvoreDependencias(ModeloGrafo):
                 maximo: bool = True) -> list[tuple[str, str, float]]:
         """Kruskal, aula 5: árvore geradora em O(E log E).
 
-        Percorre as arestas em ordem de peso (decrescente se ``maximo``)
-        e aceita cada uma que não fecha ciclo, o que o union-find decide.
-        Garante uma árvore geradora de peso máximo (ou mínimo); se o
-        grafo for desconexo, devolve uma floresta geradora. Empates são
-        desfeitos pelo nome dos vértices, para o resultado ser
-        reprodutível.
+        Percorre as arestas da mais pesada para a mais leve (ou o
+        contrário, com ``maximo=False``) e aceita cada uma que não fecha
+        ciclo. Garante uma árvore geradora de peso máximo (ou mínimo).
+        Empates são desfeitos pelo nome dos vértices, para o resultado
+        ser sempre o mesmo.
         """
         if grafo.dirigido:
             raise ValueError("Kruskal exige grafo não dirigido")
         sinal = -1.0 if maximo else 1.0
         arestas = sorted(
-            (ArvoreDependencias._ordenar(u, v) + (p,)
+            (ArvoreDependencias.ordenar_par(u, v) + (p,)
              for u, v, p in grafo.arestas() if u != v),
             key=lambda a: (sinal * a[2], str(a[0]), str(a[1])))
         conjuntos = UniaoBusca(grafo.vertices())
@@ -195,15 +174,14 @@ class ArvoreDependencias(ModeloGrafo):
         return arvore
 
     # ------------------------------------------------------------------
-    # Análises de robustez (H2)
+    # Robustez da árvore
     # ------------------------------------------------------------------
     def estabilidade(self, base, n: int = N_BOOTSTRAP,
                      semente: int = SEMENTE) -> dict[Aresta, float]:
-        """Fração de reamostragens em que cada aresta da árvore volta.
+        """Fração das reamostragens em que cada aresta da árvore volta.
 
-        Reamostra com reposição os mesmos alunos de ``construir`` (o
-        treino), refaz a IM e o Kruskal e conta as aparições. Exige
-        ``executar`` antes.
+        Sorteia os alunos com reposição, refaz a árvore e conta quantas
+        vezes cada aresta original reaparece.
         """
         if self.arvore_ is None:
             raise RuntimeError("chame executar antes de estabilidade")
@@ -231,7 +209,12 @@ class ArvoreDependencias(ModeloGrafo):
     @staticmethod
     def chaves(arestas: Iterable[tuple]) -> set[Aresta]:
         """Arestas como pares ordenados, para comparar árvores."""
-        return {ArvoreDependencias._ordenar(a[0], a[1]) for a in arestas}
+        return {ArvoreDependencias.ordenar_par(a[0], a[1]) for a in arestas}
+
+    @staticmethod
+    def ordenar_par(u: str, v: str) -> Aresta:
+        """Par (u, v) em ordem alfabética, para identificar a aresta."""
+        return (u, v) if str(u) <= str(v) else (v, u)
 
     # ------------------------------------------------------------------
     # Auxiliares
@@ -246,9 +229,10 @@ class ArvoreDependencias(ModeloGrafo):
         return [c for c in disponiveis if c not in self.excluir]
 
     def _grafo_im(self, base, idx: list[int]) -> Grafo:
-        """Grafo completo com peso = IM (bits) entre cada par."""
+        """Grafo completo com peso = informação mútua entre cada par."""
         colunas = self._colunas(base)
         dados = base.dados.loc[idx, colunas]
+        # Mesmas faixas usadas no G1, para os valores serem comparáveis.
         codigos = {c: GrafoSimilaridade.discretizar(dados[c])
                    for c in colunas}
         codigos[DESFECHO] = base.y(idx).astype(int)
@@ -264,11 +248,10 @@ class ArvoreDependencias(ModeloGrafo):
 
     @staticmethod
     def informacao_mutua(a: np.ndarray, b: np.ndarray) -> float:
-        """IM em bits entre dois vetores de códigos inteiros (>= 0).
+        """Informação mútua, em bits, entre dois vetores de códigos.
 
-        I(A;B) = soma p(a,b) · log2[p(a,b) / (p(a) p(b))], pela tabela
-        de contingência. Mesmo valor do ``mutual_info_score`` do
-        scikit-learn, porém bem mais rápido para as 741 arestas de T2.
+        I(A;B) = soma p(a,b) · log2[p(a,b) / (p(a) p(b))], calculada pela
+        tabela de contingência dos dois vetores.
         """
         nb = int(b.max()) + 1
         conjunta = np.bincount(a * nb + b, minlength=(int(a.max()) + 1) * nb)
@@ -278,8 +261,3 @@ class ArvoreDependencias(ModeloGrafo):
         nz = conjunta > 0
         razao = conjunta[nz] / (pa @ pb)[nz]
         return float(max((conjunta[nz] * np.log2(razao)).sum(), 0.0))
-
-    @staticmethod
-    def _ordenar(u: str, v: str) -> Aresta:
-        """Par (u, v) em ordem alfabética."""
-        return (u, v) if str(u) <= str(v) else (v, u)

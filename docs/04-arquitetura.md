@@ -184,7 +184,7 @@ A Fig. 2 (`fig:protocolo`) é gerada por `relatorio/figs/gerar_fig_protocolo.py`
 **Avaliação (`avaliacao.py`).** Não lê nem grava arquivos; devolve dicts e DataFrames.
 
 - `Avaliador(dobras=5, n_bootstrap=1000, n_splits=10, semente=42)`:
-  - Testes estatísticos: `metricas(y, prev)` (mesmas chaves do `Pipeline.metricas`), `auc(y, nota)`, `ic_bootstrap(y, prev)` (IC 95% por percentil da acurácia balanceada), `mcnemar(y, a, b)` (exato, binomial) e `holm(pvalores)`.
+  - Testes estatísticos: `metricas(y, prev)` (usado também pelo `Pipeline`), `auc(y, nota)`, `ic_bootstrap(y, prev)` (IC 95% por percentil da acurácia balanceada), `mcnemar(y, a, b)` (exato, binomial) e `holm(pvalores)`.
   - Fábricas de classificador `classificar(idx_treino, idx_teste, excluir=()) -> {aluno: bool}`: `classificador_g1`, `classificador_dag` e `classificador_regra`.
   - Avaliação no treino: `particoes(base)` dá as dobras estratificadas (semente 42); `validacao_cruzada(base, classificar, excluir=())` usa só o treino.
   - `ablacao_grupos(base, momento, classificar)`: Δ = (sem − com) por dobra pareada, com IC de t (4 g.l.). É essencial se o IC fica todo abaixo de 0, prejudicial se fica todo acima e neutro nos outros casos. Tirar um grupo acadêmico tira também a taxa derivada dele.
