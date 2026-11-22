@@ -27,3 +27,4 @@ Status: `pendente` · `em andamento` · `concluída` · `bloqueada`
 | 17 | Seção 5 e revisão cruzada | Nathan | Dom 22/11, 13h | pendente | |
 | 18 | Slides, vídeo da demonstração e ensaio | Nathan, Carlos, Rafael | Dom 22/11, 18h | pendente | |
 | 19 | Envio do PDF no SIGAA | Nathan | Dom 22/11, 22h | pendente | |
+| 20 | Interface gráfica (Streamlit) para a demonstração | Rafael | Dom 22/11, 16h | concluída | `app.py` (8 páginas), `visual.py` e `passo_a_passo.py`; Edmonds–Karp e Kruskal passo a passo, ego-rede do G1, DAG e simulador; selos conferem com `outputs/`; exploração de k/λ só no treino; Kruskal não alterado. Plano em `docs/planos/interface.md` |
