@@ -136,7 +136,7 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 - `estabilidade(base, n=100)`: fração dos bootstraps do treino em que cada aresta volta. `sobreposicao(a, b)`: fração das arestas de `a` presentes em `b`.
 - **Empates exatos:** PIB, desemprego e inflação têm um valor por coorte, e `International` equivale a `Nacionality`. Por isso, mais de uma árvore máxima é possível. O assert contra o networkx compara o peso total e a lista de pesos, não o conjunto de arestas.
 
-**`Pipeline` (`main.py`):** `Pipeline(saida, momentos, n_bootstrap_arvore=100, n_permutacoes=200, verificar=True, progresso=None).executar() -> dict`. Não imprime: as mensagens vão para `progresso` (`print` na linha de comando). Leva cerca de 3 minutos.
+**`Pipeline` (`main.py`):** `Pipeline(saida, momentos, n_bootstrap_arvore=100, n_permutacoes=200, verificar=True, avaliacao_completa=True, progresso=None).executar() -> dict`. Não imprime: as mensagens vão para `progresso` (`print` na linha de comando). Chama o `Avaliador` no fim.
 
 | Arquivo em `outputs/` | Conteúdo | Usado em |
 |---|---|---|
@@ -147,7 +147,16 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 | `g1_assortatividade.csv` | r de Newman, p da permutação, máximo nulo | H5 |
 | `g2_arvore_T*.csv` | arestas da árvore com IM, estabilidade e presença na árvore do teste | Fig. 5, H2 |
 | `g2_im_desfecho.csv` | IM de cada atributo com o desfecho por momento | H1 |
+| `avaliacao_teste.csv` | por momento e método (majoritária, regra de 1 variável, DAG, corte, corte só com essenciais, regressão logística): métricas, IC 95% e AUC | **Tab. 3** |
+| `avaliacao_mcnemar.csv` | corte × regra e corte × DAG: acertos exclusivos, p e p de Holm | Tab. 3, H4 |
+| `avaliacao_cv.csv` | CV de 5 dobras no treino (média e dp) de corte, DAG e regra | seção 4 |
+| `avaliacao_ablacao.csv` | Δ por grupo, IC 95% e classe (essencial, neutro, prejudicial) | Fig. de ablação, H3 |
+| `avaliacao_backward.csv` | histórico da eliminação backward (atributo, acurácia na CV, saiu ou ficou) | H3 |
+| `avaliacao_robustez.csv` | 10 divisões 80/20: média, dp e acurácias | Tab. 3 |
+| `avaliacao_previsoes.csv` | previsão de cada método para cada aluno do teste | conferência |
 | `resultados.json` | tudo acima, mais fluxo, caminhos aumentantes e pesos do G1 | relatório e slides |
+
+`python src/main.py --rapido` pula a ablação, o backward e a robustez (cerca de 3 min). A execução completa leva cerca de 30 min.
 
 O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A integração supõe `DagTrajetorias(momento)` e uma chave opcional `previsoes` no `executar()`, como no G1. Se a assinatura for outra, combine com o Carlos.
 
@@ -156,6 +165,21 @@ O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A i
 - `Kahn().ordenar(grafo) -> list`: ordem topológica; `ValueError` se houver ciclo.
 - `BellmanFord()`: `distancias(grafo, fonte) -> dict` e `caminho(destino) -> list`; aceita pesos negativos e detecta ciclo negativo.
 - `DagTrajetorias(momento="T2", min_suporte=20, limiar=None)`: `construir(base, idx_treino=None, idx_teste=None)` monta o DAG só com o treino (peso do arco = número de alunos); do teste guarda só os estados L0–L3. `executar()` devolve `ordem_topologica`, `trajetoria_risco` e `trajetoria_segura` (`caminho`, `n`, `evasoes` no treino), `ponto_de_virada`, `risco` (nota contínua, serve para a AUC) e `previsoes` por aluno, e `limiar`. `destaques()` devolve a trajetória de maior risco. Estatísticas: `contagem_vertice_`, `evasoes_vertice_`, `contagem_arco_`, `evasoes_arco_`, `probabilidade(u, v)`, `taxa_arco(u, v)`; `DagTrajetorias.estados(df)` dá os estados de qualquer aluno.
+
+**Avaliação (`avaliacao.py`).** Não lê nem grava arquivos; devolve dicts e DataFrames.
+
+- `Avaliador(dobras=5, n_bootstrap=1000, n_splits=10, semente=42)`:
+  - Testes estatísticos: `metricas(y, prev)` (mesmas chaves do `Pipeline.metricas`), `auc(y, nota)`, `ic_bootstrap(y, prev)` (IC 95% por percentil da acurácia balanceada), `mcnemar(y, a, b)` (exato, binomial) e `holm(pvalores)`.
+  - Fábricas de classificador `classificar(idx_treino, idx_teste, excluir=()) -> {aluno: bool}`: `classificador_g1`, `classificador_dag` e `classificador_regra`.
+  - Avaliação no treino: `particoes(base)` dá as dobras estratificadas (semente 42); `validacao_cruzada(base, classificar, excluir=())` usa só o treino.
+  - `ablacao_grupos(base, momento, classificar)`: Δ = (sem − com) por dobra pareada, com IC de t (4 g.l.). É essencial se o IC fica todo abaixo de 0, prejudicial se fica todo acima e neutro nos outros casos. Tirar um grupo acadêmico tira também a taxa derivada dele.
+  - `eliminacao_backward(base, momento, classificar, tolerancia=0)`: versão gulosa ordenada. Tenta tirar cada atributo, do de menor para o de maior IM no treino, e mantém a remoção se a CV não piorar. É um teste por atributo, para caber no tempo do trabalho.
+  - `robustez(base, classificar)`: 10 divisões 80/20, com sementes sorteadas a partir da 42.
+  - Teste: `avaliar_teste(y, previsoes, notas)` e `comparar(y_por_momento, previsoes, pares)`, com McNemar e Holm sobre toda a família de comparações.
+  - `executar(base, ablacao=True, backward=True, robustez=True, progresso=None)` roda tudo e devolve as tabelas `cv`, `teste`, `previsoes`, `mcnemar`, `regras`, `ablacao`, `backward` e `robustez`.
+- `RegraUmaVariavel`: melhor limiar de um atributo numérico, aprendido no treino. Saem T0 idade ≥ 22 (o oficial dizia ≥ 23, que no treino fica 0,003 abaixo), T1 aprovação no S1 < 78% e T2 aprovação no S2 < 79%.
+- `RegressaoLogisticaReferencia`: one-hot nas nominais, padronização nas numéricas, indicador de ausente e classes balanceadas. É só uma régua externa.
+- A família do McNemar tem 6 testes: corte × regra e corte × DAG, em T0, T1 e T2. A AUC do corte mínimo continua sem nota contínua (pendente).
 
 ## Padrões de código
 
