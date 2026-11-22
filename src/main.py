@@ -31,9 +31,12 @@ Uso::
 """
 
 import json
+import os
+import platform
 import sys
 import time
 from collections.abc import Callable
+from importlib import metadata
 from pathlib import Path
 
 import numpy as np
@@ -46,7 +49,8 @@ from dados import SEMENTE, BaseDeDados
 from grafo_similaridade import K_PADRAO, GrafoSimilaridade
 
 try:
-    from dag_trajetorias import DagTrajetorias
+    from dag_trajetorias import (CAMADAS_POR_MOMENTO, MIN_SUPORTE,
+                                 SUAVIZACAO, DagTrajetorias)
 except ImportError:          # G3 ainda não implementado
     DagTrajetorias = None
 
@@ -65,6 +69,10 @@ N_BOOTSTRAP_IC = 1000
 N_SPLITS_ROBUSTEZ = 10
 
 TOLERANCIA = 1e-9
+
+# Bibliotecas cujas versões vão para o registro do ambiente.
+BIBLIOTECAS = ("numpy", "pandas", "scikit-learn", "scipy", "networkx",
+               "matplotlib")
 
 
 class Pipeline:
@@ -98,6 +106,7 @@ class Pipeline:
         self._progresso = progresso or (lambda _msg: None)
         self.base: BaseDeDados | None = None
         self.resultados: dict = {}
+        self._tempos: dict[str, float] = {}
 
     # ------------------------------------------------------------------
     # Execução
@@ -105,8 +114,9 @@ class Pipeline:
     def executar(self) -> dict:
         """Roda o protocolo completo e devolve o dict de resultados."""
         inicio = time.perf_counter()
+        self._tempos = {}
         self._avisar("Carregando dados e divisão 80/20 (semente 42)")
-        self.base = BaseDeDados()
+        self.base = self._cronometrar("dados", BaseDeDados)
         self.resultados = {
             "dados": self._resumo_dados(),
             "hiperparametros": self._hiperparametros(),
@@ -114,18 +124,78 @@ class Pipeline:
         self.saida.mkdir(parents=True, exist_ok=True)
         self._gravar_split()
 
-        self.resultados["g1"] = self._executar_g1()
-        self.resultados["assortatividade"] = self._assortatividade()
-        self.resultados["g2"] = self._executar_g2()
-        self.resultados["g3"] = self._executar_g3()
-        self.resultados["avaliacao"] = self._avaliar()
-        self.resultados["tempo_s"] = round(time.perf_counter() - inicio, 1)
+        self.resultados["g1"] = self._cronometrar("g1", self._executar_g1)
+        self.resultados["assortatividade"] = self._cronometrar(
+            "assortatividade", self._assortatividade)
+        self.resultados["g2"] = self._cronometrar("g2", self._executar_g2)
+        self.resultados["g3"] = self._cronometrar("g3", self._executar_g3)
+        self.resultados["avaliacao"] = self._cronometrar(
+            "avaliacao", self._avaliar)
+        self._tempos["total"] = time.perf_counter() - inicio
+
+        ambiente = self.ambiente()
+        ambiente["avaliacao_completa"] = self.avaliacao_completa
+        ambiente["tempo_s"] = {etapa: round(s, 1)
+                               for etapa, s in self._tempos.items()}
+        self.resultados["hiperparametros"]["ambiente"] = ambiente
+        self.resultados["tempo_s"] = ambiente["tempo_s"]["total"]
         self._gravar_json("resultados.json", self.resultados)
         self._gravar_json("hiperparametros.json",
                           self.resultados["hiperparametros"])
         self._avisar(f"Concluído em {self.resultados['tempo_s']} s; "
                      f"resultados em {self.saida}")
         return self.resultados
+
+    @staticmethod
+    def ambiente() -> dict:
+        """Ambiente de execução ("Ambiente de testes" do relatório).
+
+        Registra versões, sistema, processador e memória; não registra
+        nome de usuário nem da máquina.
+        """
+        bibliotecas = {}
+        for nome in BIBLIOTECAS:
+            try:
+                bibliotecas[nome] = metadata.version(nome)
+            except metadata.PackageNotFoundError:
+                bibliotecas[nome] = None
+        return {
+            "python": platform.python_version(),
+            "bibliotecas": bibliotecas,
+            "sistema": f"{platform.system()} {platform.release()}",
+            "processador": Pipeline._processador(),
+            "nucleos_logicos": os.cpu_count(),
+            "memoria_gb": Pipeline._memoria_gb(),
+        }
+
+    @staticmethod
+    def _processador() -> str:
+        """Modelo da CPU (``/proc/cpuinfo`` no Linux)."""
+        try:
+            with open("/proc/cpuinfo", encoding="utf-8") as arquivo:
+                for linha in arquivo:
+                    if linha.startswith("model name"):
+                        return linha.split(":", 1)[1].strip()
+        except OSError:
+            pass
+        return platform.processor() or platform.machine()
+
+    @staticmethod
+    def _memoria_gb() -> float | None:
+        """Memória RAM total em GB, quando o sistema informa."""
+        try:
+            paginas = os.sysconf("SC_PHYS_PAGES")
+            tamanho = os.sysconf("SC_PAGE_SIZE")
+        except (AttributeError, ValueError, OSError):
+            return None
+        return round(paginas * tamanho / 1024 ** 3, 1)
+
+    def _cronometrar(self, etapa: str, funcao: Callable):
+        """Executa ``funcao`` e guarda o tempo da etapa, em segundos."""
+        inicio = time.perf_counter()
+        resultado = funcao()
+        self._tempos[etapa] = time.perf_counter() - inicio
+        return resultado
 
     # ------------------------------------------------------------------
     # G1 · similaridade + corte mínimo
@@ -260,7 +330,9 @@ class Pipeline:
             return {"status": "não implementado"}
         base = self.base
         y_teste = base.y(base.idx_teste)
-        saida = {}
+        previsoes = pd.DataFrame({"aluno": base.idx_teste,
+                                  "evadiu": y_teste})
+        metricas, saida = [], {}
         for m in self.momentos:
             self._avisar(f"G3 {m}: DAG de trajetórias (Kahn + "
                          "Bellman-Ford)")
@@ -273,12 +345,25 @@ class Pipeline:
                 continue
             if self.verificar and modelo.grafo is not None:
                 self._conferir_dag(modelo)
-            resumo = {c: v for c, v in r.items() if c != "previsoes"}
+            # Risco e previsão por aluno vão para o CSV, não para o JSON.
+            resumo = {c: v for c, v in r.items()
+                      if c not in ("previsoes", "risco")}
             if "previsoes" in r:
                 y_prev = np.array([r["previsoes"][i]
                                    for i in base.idx_teste])
+                previsoes[m] = y_prev
+                if "risco" in r:
+                    previsoes[f"risco_{m}"] = [r["risco"][i]
+                                               for i in base.idx_teste]
                 resumo["teste"] = self.metricas(y_teste, y_prev)
+                metricas.append({"momento": m, "metodo": "caminho_dag",
+                                 **resumo["teste"]})
             saida[m] = resumo
+        if metricas:
+            previsoes.to_csv(self.saida / "g3_previsoes_teste.csv",
+                             index=False)
+            pd.DataFrame(metricas).to_csv(
+                self.saida / "g3_metricas_teste.csv", index=False)
         return saida
 
     # ------------------------------------------------------------------
@@ -422,8 +507,22 @@ class Pipeline:
             "g2": {"peso": "informação mútua (bits, treino)",
                    "algoritmo": "Kruskal decrescente + union-find",
                    "bootstrap_estabilidade": self.n_bootstrap_arvore},
+            "g3": self._hiperparametros_g3(),
             "avaliacao": {"bootstrap_ic95": N_BOOTSTRAP_IC,
                           "splits_robustez": N_SPLITS_ROBUSTEZ},
+        }
+
+    def _hiperparametros_g3(self) -> dict | None:
+        """Parâmetros do DAG de trajetórias, se o G3 existir."""
+        if DagTrajetorias is None:
+            return None
+        return {
+            "camadas_por_momento": {m: CAMADAS_POR_MOMENTO[m]
+                                    for m in self.momentos},
+            "min_suporte": MIN_SUPORTE,
+            "suavizacao_laplace": SUAVIZACAO,
+            "peso_bellman_ford": "-ln(taxa de evasão do arco)",
+            "limiar": "taxa de evasão do treino",
         }
 
     def _gravar_split(self) -> None:

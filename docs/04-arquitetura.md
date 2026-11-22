@@ -142,11 +142,12 @@ ClassificadorCorteMinimo(lam=1.0).classificar(grafo, rotulos_treino, idx_teste) 
 | Arquivo em `outputs/` | Conteúdo | Usado em |
 |---|---|---|
 | `split.csv` | aluno e conjunto (treino ou teste) | reprodutibilidade |
-| `hiperparametros.json` | parâmetros do protocolo | Tab. 2 |
+| `hiperparametros.json` | parâmetros do protocolo e `ambiente` (Python, bibliotecas, sistema, CPU, RAM, tempo por etapa) | Tab. 2 e "Ambiente de testes" |
 | `g1_previsoes_teste.csv` | aluno, desfecho real, previsão em T0/T1/T2 | `Avaliador` (bootstrap, McNemar) |
 | `g1_metricas_teste.csv` | acurácia balanceada, recall, especificidade, precisão, F1, VP/FP/FN/VN; corte mínimo e classe majoritária | Tab. 3 |
 | `g1_assortatividade.csv` | r de Newman, p da permutação, máximo nulo | H5 |
 | `g2_arvore_T*.csv` | arestas da árvore com IM, estabilidade e presença na árvore do teste | Fig. 5, H2 |
+| `g3_previsoes_teste.csv` / `g3_metricas_teste.csv` | risco e previsão do caminho no DAG por aluno; métricas no teste | Tab. 3 |
 | `g2_im_desfecho.csv` | IM de cada atributo com o desfecho por momento | H1 |
 | `avaliacao_teste.csv` | por momento e método (majoritária, regra de 1 variável, DAG, corte, corte só com essenciais, regressão logística): métricas, IC 95% e AUC | **Tab. 3** |
 | `avaliacao_mcnemar.csv` | corte × regra e corte × DAG: acertos exclusivos, p e p de Holm | Tab. 3, H4 |
@@ -165,7 +166,9 @@ Os arquivos `fatores_*` e as figuras são gravados por `python src/figuras.py`, 
 
 `python src/main.py --rapido` pula a ablação, o backward e a robustez (cerca de 3 min). A execução completa leva cerca de 2h10 (o backward é a parte lenta).
 
-O G3 entra no pipeline quando `dag_trajetorias.py` expuser `DagTrajetorias`. A integração supõe `DagTrajetorias(momento)` e uma chave opcional `previsoes` no `executar()`, como no G1. Se a assinatura for outra, combine com o Carlos.
+O G3 entra no pipeline por `DagTrajetorias(momento)`; o risco e a previsão por aluno vão para `g3_previsoes_teste.csv`, e o resto do `executar()` para `resultados.json`.
+
+A Fig. 2 (`fig:protocolo`) é gerada por `relatorio/figs/gerar_fig_protocolo.py`, que lê `outputs/resultados.json`: rode depois do `main.py`.
 
 **G3 (`dag_trajetorias.py`).** Três classes:
 
