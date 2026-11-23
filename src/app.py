@@ -32,7 +32,7 @@ from dag_trajetorias import CAMADAS_POR_MOMENTO, INICIO, DagTrajetorias
 from explicacao import ExplicadorGower, grupo_do_atributo
 from figuras import CORES_GRUPO, NOMES_GRUPO, ROTULOS
 from grafo_similaridade import GrafoSimilaridade
-from passo_a_passo import DemoKruskal
+from passo_a_passo import DemoKruskal, ExploradorArvore
 from visual import (COR_EVASAO, COR_SEGURA, GrafoECharts,
                     MontadorVisual)
 
@@ -118,6 +118,11 @@ def demo_kruskal(momento: str) -> dict:
     return DemoKruskal().executar(modelo, resultado["arestas"])
 
 
+@st.cache_resource
+def explorador_g2(momento: str) -> ExploradorArvore:
+    return ExploradorArvore(modelo_g2(momento)[1]["arestas"], DESFECHO)
+
+
 @st.cache_data
 def estados_treino() -> pd.DataFrame:
     """Estados L0–L3 dos alunos de treino, com o desfecho."""
@@ -153,9 +158,9 @@ def montador() -> MontadorVisual:
 
 def desenhar(desenho: tuple, altura: int = 560) -> None:
     vertices, arestas, opcoes = desenho
-    html = MontadorVisual(altura, modo_escuro()).html(
-        vertices, arestas, opcoes)
-    st.iframe(html, height=altura + 12)
+    px = px_desenho(altura)
+    html = MontadorVisual(px, modo_escuro()).html(vertices, arestas, opcoes)
+    st.iframe(html, height=px + 12)
 
 
 def escolher_momento(chave: str, padrao: str = "T1") -> str:
@@ -164,8 +169,27 @@ def escolher_momento(chave: str, padrao: str = "T1") -> str:
         format_func=NOME_MOMENTO.get, key=chave)
 
 
+def apresentacao() -> bool:
+    """Modo apresentação: sem quadros de leitura nem detalhes, grafos
+    maiores (para projetor e vídeo). Ligado na barra lateral."""
+    return bool(st.session_state.get("apresentacao", False))
+
+
+def px_desenho(px: int) -> int:
+    """Altura de um desenho; 30% maior no modo apresentação."""
+    return round(px * 1.3) if apresentacao() else px
+
+
+def nota(texto: str) -> None:
+    """Texto explicativo curto; some no modo apresentação."""
+    if not apresentacao():
+        st.caption(texto)
+
+
 def como_ler(vertice: str, aresta: str, leitura: list[str]) -> None:
     """Quadro fixo com o que são vértice e aresta e como ler o desenho."""
+    if apresentacao():
+        return
     with st.container(border=True):
         c1, c2 = st.columns([1, 1.5])
         c1.markdown(f"**:material/circle: Vértice** · {vertice}\n\n"
@@ -178,30 +202,6 @@ def avisar_divergencia(confere: bool) -> None:
     if not confere:
         st.warning("O resultado na tela difere de `outputs/`. Rode "
                    "`python src/main.py` de novo.")
-
-
-def navegar_passos(chave: str, total: int) -> int:
-    """Controle de passos: botões ◀ ▶ e barra deslizante."""
-    if chave not in st.session_state:
-        st.session_state[chave] = 0
-    st.session_state[chave] = min(st.session_state[chave], total - 1)
-
-    def mover(delta: int) -> None:
-        st.session_state[chave] = int(
-            np.clip(st.session_state[chave] + delta, 0, total - 1))
-
-    c1, c2, c3, c4 = st.columns([1, 1, 1, 8])
-    c1.button("⏮", key=f"{chave}_ini", on_click=mover, args=(-total,),
-              width="stretch")
-    c2.button("◀", key=f"{chave}_ant", on_click=mover, args=(-1,),
-              width="stretch")
-    c3.button("▶", key=f"{chave}_prox", on_click=mover, args=(1,),
-              width="stretch")
-    with c4:
-        st.slider("Passo", 0, max(total - 1, 1), key=chave,
-                  label_visibility="collapsed",
-                  disabled=total <= 1)
-    return st.session_state[chave]
 
 
 # ----------------------------------------------------------------------
@@ -316,7 +316,7 @@ def secao_fatores() -> None:
 
     # 1. Peso no grafo ------------------------------------------------
     st.subheader("1 · Peso de cada atributo no grafo de similaridade")
-    st.caption(
+    nota(
         "Na distância de Gower do G1, cada atributo entra com peso igual "
         "à sua informação mútua com o desfecho, calculada só no treino e "
         "normalizada para somar 100%. Atributo de peso maior aproxima "
@@ -360,7 +360,7 @@ def secao_fatores() -> None:
 
     # 2. Ablação ------------------------------------------------------
     st.subheader("2 · Quanto a acurácia cai sem cada grupo")
-    st.caption(
+    nota(
         "Ablação na validação cruzada do treino: o corte mínimo é "
         "refeito sem o grupo e comparado com o modelo completo. Barra "
         "à esquerda do zero = o grupo faz falta. É **essencial** quando "
@@ -396,7 +396,7 @@ def secao_fatores() -> None:
 
     # 3. Perfis de risco ----------------------------------------------
     st.subheader("3 · Perfis que mais elevam (ou reduzem) a evasão")
-    st.caption(
+    nota(
         f"Lift = taxa de evasão do perfil ÷ taxa geral "
         f"({pct(taxa_base, 1)}). Lift 2× = evadem o dobro da média. "
         f"Calculado no treino; a última coluna repete a taxa no teste "
@@ -531,8 +531,9 @@ def pagina_g1() -> None:
     with col_g:
         evento = st.echarts_chart(
             opcao, on_select="rerun", key=f"ego_{momento}_{aluno}",
-            height=560, alt=f"Aluno {aluno} e seus {len(vizinhos)} "
-            "vizinhos no grafo kNN de Gower")
+            height=px_desenho(560),
+            alt=f"Aluno {aluno} e seus {len(vizinhos)} vizinhos no grafo "
+            "kNN de Gower")
     par = par_selecionado(evento, ordem, pares, aluno)
     explicador = explicador_g1(momento)
     with col_i:
@@ -543,15 +544,16 @@ def pagina_g1() -> None:
             painel_aresta(explicador, *par, modelo.rotulos_, previsoes,
                           real)
 
-    with st.expander("Todos os vizinhos do aluno"):
-        st.dataframe(tabela, hide_index=True, width="stretch",
-                     alt=f"Vizinhos do aluno {aluno} no kNN",
-                     column_config={
-                         "distância de Gower":
-                             st.column_config.NumberColumn(format="%.3f"),
-                         "capacidade":
-                             st.column_config.NumberColumn(format="%.3f")})
-    st.caption(
+    if not apresentacao():
+        with st.expander("Todos os vizinhos do aluno"):
+            st.dataframe(tabela, hide_index=True, width="stretch",
+                         alt=f"Vizinhos do aluno {aluno} no kNN",
+                         column_config={
+                             "distância de Gower":
+                                 st.column_config.NumberColumn(format="%.3f"),
+                             "capacidade":
+                                 st.column_config.NumberColumn(format="%.3f")})
+    nota(
         f"Grafo completo: {br(resultado['num_vertices'], 0)} vértices e "
         f"{br(resultado['num_arestas'], 0)} arestas (k = {modelo.k}, "
         f"λ = {br(modelo.lam, 1)}); "
@@ -641,49 +643,37 @@ def painel_aresta(explicador: ExplicadorGower, u: int, v: int,
     st.altair_chart(grafico, alt=f"Contribuição de cada atributo para a "
                     f"similaridade entre os alunos {u} e {v}")
     resto = float(tabela.semelhanca.iloc[TOPO_ATRIBUTOS:].sum())
-    st.caption(
+    nota(
         "Barra inteira = peso do atributo. Parte verde = quanto desse "
         "peso os dois ganharam por serem parecidos nele. A soma das "
         "partes verdes de todos os atributos é a similaridade "
         f"({br(similaridade, 3)}); os demais "
         f"{len(tabela) - len(topo)} atributos somam {br(resto, 3)}.")
-    with st.expander("Valores dos dois alunos"):
-        st.dataframe(
-            topo[["rotulo", "valor_i", "valor_j", "peso", "semelhanca"]],
-            hide_index=True, width="stretch",
-            alt=f"Valores dos alunos {u} e {v} nos atributos de maior peso",
-            column_config={
-                "rotulo": "atributo",
-                "valor_i": f"aluno {u}", "valor_j": f"aluno {v}",
-                "peso": st.column_config.NumberColumn(
-                    "peso", format="percent"),
-                "semelhanca": st.column_config.NumberColumn(
-                    "em comum", format="percent")})
+    if not apresentacao():
+        with st.expander("Valores dos dois alunos"):
+            st.dataframe(
+                topo[["rotulo", "valor_i", "valor_j", "peso",
+                      "semelhanca"]],
+                hide_index=True, width="stretch",
+                alt=f"Valores dos alunos {u} e {v} nos atributos de "
+                "maior peso",
+                column_config={
+                    "rotulo": "atributo",
+                    "valor_i": f"aluno {u}", "valor_j": f"aluno {v}",
+                    "peso": st.column_config.NumberColumn(
+                        "peso", format="percent"),
+                    "semelhanca": st.column_config.NumberColumn(
+                        "em comum", format="percent")})
 
 
 def pagina_g2() -> None:
     st.title("G2 · Árvore de dependências")
-    c1, c2 = st.columns(2, vertical_alignment="bottom")
-    with c1:
-        momento = escolher_momento("g2_momento")
-    visao = c2.segmented_control(
-        "Mostrar", ["Árvore final", "Kruskal passo a passo"],
-        default="Árvore final", required=True, key="g2_visao")
-    if visao == "Árvore final":
-        arvore_final(momento)
-    else:
-        kruskal_passo_a_passo(momento)
-
-
-def arvore_final(momento: str) -> None:
+    momento = escolher_momento("g2_momento")
     modelo, resultado = modelo_g2(momento)
     oficial = ler_json("resultados.json")["g2"][momento]
     avisar_divergencia(
         abs(resultado["peso_total"] - oficial["peso_total"]) < TOLERANCIA)
 
-    csv = ler_csv(f"g2_arvore_{momento}.csv")
-    estabilidade = {tuple(sorted((r.u, r.v))): r.estabilidade
-                    for r in csv.itertuples()}
     c = st.columns(4)
     c[0].metric("Vértices", oficial["num_vertices"])
     c[1].metric("Peso total (bits)", br(oficial['peso_total'], 2))
@@ -694,76 +684,169 @@ def arvore_final(momento: str) -> None:
                 pct(oficial['sobreposicao_treino_teste'], 0))
 
     como_ler(
-        "um atributo do aluno; o **Desfecho** (evadiu ou não) é o "
-        "vértice vermelho.",
-        "dependência entre dois atributos, mantida pelo Kruskal na "
+        "um atributo do aluno; o **Desfecho** (evadiu ou não) fica no "
+        "centro.",
+        "dependência entre dois atributos, aceita pelo Kruskal na "
         "árvore geradora de peso máximo (peso = informação mútua).",
-        ["**Espessura** = informação mútua (bits): quanto saber um "
-         "atributo diz sobre o outro.",
-         "**Número na aresta** = informação mútua com o Desfecho.",
-         "**Laranja** = vizinho direto do Desfecho: o que mais informa "
-         "sobre a evasão naquele momento.",
-         "**Opacidade** = estabilidade: % de 100 bootstraps em que a "
-         "aresta reaparece. Arraste os vértices para reorganizar."])
-    col_g, col_t = st.columns([3, 1.2])
-    with col_g:
-        desenhar(montador().arvore_g2(
-            resultado["arestas"], modelo.grafo.vertices(), DESFECHO,
-            estabilidade), altura=620)
-    with col_t:
-        st.markdown("**Vizinhos do Desfecho**")
-        viz = pd.DataFrame(oficial["vizinhos_desfecho"])
-        viz["atributo"] = viz.atributo.map(lambda a: ROTULOS.get(a, a))
-        st.dataframe(viz.rename(columns={"im_bits": "IM (bits)"}),
-                     hide_index=True, width="stretch",
-                     column_config={"estabilidade":
-                                    st.column_config.NumberColumn(
-                                        format="percent")})
-    with st.expander("Todas as arestas da árvore"):
-        st.dataframe(csv, hide_index=True, width="stretch")
+        ["**Anéis** = distância até o Desfecho na árvore; no 1º anel "
+         "estão os vizinhos diretos.",
+         "**Régua**: desça para o Kruskal aceitar ligações cada vez mais "
+         "fracas e veja os blocos se formarem e se ligarem ao Desfecho "
+         "(▶ anima). **Vermelho claro** = já ligado ao Desfecho; outras "
+         "cores = blocos ainda soltos (componentes do union-find); "
+         "cinza = sozinho.",
+         "**Espessura** = informação mútua; **opacidade** = estabilidade "
+         "em 100 bootstraps.",
+         "**Clique num atributo** para ver o caminho até o Desfecho "
+         "(laranja) e o **gargalo**, a ligação mais fraca. Tracejado = "
+         "trecho que a régua ainda não aceitou. Arraste os vértices se "
+         "os rótulos se sobrepuserem."])
+
+    total = len(resultado["arestas"])
+    chave, anima = f"g2_regua_{momento}", f"g2_anima_{momento}"
+    st.session_state.setdefault(chave, total)
+    animando = st.session_state.get(anima, False)
+    if st.button(":material/pause: Parar" if animando
+                 else ":material/play_arrow: Animar o Kruskal",
+                 key=f"g2_botao_{momento}"):
+        st.session_state[anima] = not animando
+        if not animando:
+            st.session_state[chave] = 1
+        st.rerun()
+    corpo = REGUA_ANIMADA if st.session_state.get(anima) else REGUA
+    corpo(momento)
+
+    if not apresentacao():
+        with st.expander("Todas as arestas da árvore"):
+            st.dataframe(ler_csv(f"g2_arvore_{momento}.csv"),
+                         hide_index=True, width="stretch")
 
 
-def kruskal_passo_a_passo(momento: str) -> None:
+def regua_e_caminho(momento: str) -> None:
+    """Régua de IM (estado do Kruskal), desenho e caminho clicado.
+
+    Roda como fragmento: mexer na régua ou clicar num atributo refaz só
+    esta parte; animando, avança uma aresta por vez sozinha.
+    """
+    _, resultado = modelo_g2(momento)
     demo = demo_kruskal(momento)
-    so_aceitas = st.toggle("Pular as rejeitadas", value=False)
-    indices = [j for j, p in enumerate(demo["passos"])
-               if p["aceita"] or not so_aceitas]
-    pos = navegar_passos(f"kr_passo_{momento}_{so_aceitas}", len(indices))
-    j = indices[pos]
-    passo = demo["passos"][j]
-    total = len(demo["vertices"]) - 1
+    explorador = explorador_g2(momento)
+    total = len(resultado["arestas"])
+    chave, anima = f"g2_regua_{momento}", f"g2_anima_{momento}"
+    if st.session_state.get(anima):
+        if st.session_state[chave] >= total:
+            st.session_state[anima] = False
+            st.rerun(scope="app")
+        st.session_state[chave] += 1
+
+    limiares = [p["peso"] for p in demo["passos"] if p["aceita"]]
+    k = st.select_slider(
+        "Régua de informação mútua · dependência mínima já aceita",
+        options=list(range(1, total + 1)), key=chave,
+        format_func=lambda i: f"{br(limiares[i - 1], 3)} bits · "
+        f"{i}/{total}")
+    estado = explorador.regua(demo["passos"], k)
+    componentes = estado["componentes"]
+    raiz = componentes[DESFECHO]
+    ligados = sum(r == raiz for r in componentes.values()) - 1
 
     c = st.columns(4)
-    c[0].metric("Aresta examinada", f"{j + 1} de {demo['num_examinadas']}",
-                help=f"o grafo completo tem "
-                f"{demo['num_arestas_completo']} arestas; o Kruskal para "
-                "quando a árvore fica completa")
-    c[1].metric("IM (bits)", br(passo["peso"], 4)
-                if passo["peso"] >= 1e-4 else "< 0,0001")
-    c[2].metric("Arestas na árvore", f"{passo['num_aceitas']} de {total}")
-    c[3].metric("Componentes", len(set(passo["componentes"].values())))
-    u, v = (ROTULOS.get(x, x) for x in (passo["u"], passo["v"]))
-    if passo["aceita"]:
-        st.success(f"**Aceita:** {u} — {v} une dois componentes.")
-    else:
-        st.error(f"**Rejeitada:** {u} e {v} já estão no mesmo "
-                 "componente; a aresta fecharia um ciclo.")
+    c[0].metric("Arestas aceitas", f"{k} de {total}", border=True)
+    c[1].metric("Rejeitadas (fechariam ciclo)", estado["rejeitadas"],
+                border=True)
+    c[2].metric("Blocos soltos", len(set(componentes.values())),
+                border=True, help="Componentes do union-find nesse "
+                "ponto; 1 = árvore completa.")
+    c[3].metric("Atributos ligados ao Desfecho",
+                f"{ligados} de {len(componentes) - 1}", border=True)
 
-    aceitas = [(p["u"], p["v"], p["peso"])
-               for p in demo["passos"][:j] if p["aceita"]]
-    como_ler(
-        "um atributo, em círculo fixo, com o Desfecho no centro.",
-        "par de atributos candidato, examinado em ordem decrescente de "
-        "informação mútua.",
-        ["**Verde** = aresta aceita na vez (une dois componentes).",
-         "**Vermelho** = aresta rejeitada: fecharia um ciclo.",
-         "**Cinza-escuro** = árvore montada até aqui.",
-         "**Cor do vértice** = componente do union-find; cores iguais "
-         "= já estão conectados."])
-    desenhar(montador().passo_kruskal(
-        demo["vertices"], DESFECHO, aceitas,
-        (passo["u"], passo["v"], passo["peso"], passo["aceita"]),
-        passo["componentes"]), altura=700)
+    csv = ler_csv(f"g2_arvore_{momento}.csv")
+    estabilidade = {tuple(sorted((r.u, r.v))): r.estabilidade
+                    for r in csv.itertuples()}
+    chave_grafico = f"g2_arvore_{momento}"
+    selecionado = atributo_selecionado(chave_grafico)
+    caminho = (explorador.caminho(selecionado)
+               if selecionado not in (None, DESFECHO) else None)
+    gargalo = explorador.gargalo(caminho) if caminho else None
+
+    opcao, vertices = GrafoECharts(modo_escuro()).arvore_g2(
+        explorador.layout_radial(), DESFECHO, estado["aceitas"],
+        componentes, estabilidade, caminho, gargalo)
+    st.session_state[f"{chave_grafico}_vertices"] = vertices
+    col_g, col_p = st.columns([1.6, 1])
+    with col_g:
+        st.echarts_chart(
+            opcao, on_select="rerun", key=chave_grafico,
+            height=px_desenho(640),
+            alt=f"Árvore de dependências em {momento} com {k} arestas "
+            "aceitas pelo Kruskal")
+    with col_p:
+        if caminho:
+            painel_caminho(selecionado, caminho, gargalo, explorador,
+                           resultado["im_desfecho"])
+        else:
+            st.markdown("**Vizinhos do Desfecho na árvore completa**")
+            viz = pd.DataFrame(resultado["vizinhos_desfecho"],
+                               columns=["atributo", "IM (bits)"])
+            viz["atributo"] = viz.atributo.map(lambda a: ROTULOS.get(a, a))
+            st.dataframe(viz, hide_index=True, width="stretch",
+                         alt="Vizinhos do Desfecho na árvore",
+                         column_config={"IM (bits)":
+                                        st.column_config.NumberColumn(
+                                            format="%.4f")})
+            st.info("Clique num atributo do desenho para ver o caminho "
+                    "dele até o Desfecho e o gargalo.",
+                    icon=":material/touch_app:")
+
+
+REGUA = st.fragment(regua_e_caminho)
+REGUA_ANIMADA = st.fragment(regua_e_caminho, run_every=0.7)
+
+
+def atributo_selecionado(chave: str) -> str | None:
+    """Atributo clicado no desenho (estado do gráfico no session_state)."""
+    evento = st.session_state.get(chave)
+    vertices = st.session_state.get(f"{chave}_vertices", [])
+    if not evento:
+        return None
+    for grupo in evento.get("selection", {}).get("selected", []):
+        indices = grupo.get("data_indices") or []
+        if grupo.get("data_type") == "node" and indices:
+            if indices[0] < len(vertices):
+                return vertices[indices[0]]
+    return None
+
+
+def painel_caminho(origem: str, caminho: list, gargalo: tuple,
+                   explorador: ExploradorArvore,
+                   im_desfecho: dict) -> None:
+    nome = ROTULOS.get(origem, origem)
+    st.markdown(f"#### {nome} → Desfecho")
+    passos = explorador.profundidade(origem)
+    c1, c2 = st.columns(2)
+    c1.metric("Gargalo", f"{br(gargalo[2], 3)} bits", border=True,
+              help=f"{ROTULOS.get(gargalo[0], gargalo[0])} — "
+              f"{ROTULOS.get(gargalo[1], gargalo[1])}")
+    c2.metric("Distância", f"{passos} aresta" + ("s" if passos > 1
+                                                  else ""), border=True)
+    st.dataframe(pd.DataFrame([
+        {"de": ROTULOS.get(u, u), "para": "Desfecho" if v == DESFECHO
+         else ROTULOS.get(v, v), "IM (bits)": p,
+         "gargalo": "◀" if (u, v, p) == gargalo else ""}
+        for u, v, p in caminho]), hide_index=True, width="stretch",
+        alt=f"Caminho de {nome} até o Desfecho",
+        column_config={"IM (bits)": st.column_config.NumberColumn(
+            format="%.4f")})
+    direta = im_desfecho.get(origem)
+    if passos > 1 and direta is not None:
+        nota(f"IM direta de {nome} com o Desfecho: {br(direta, 3)} bits, "
+             f"no máximo igual ao gargalo. Na árvore geradora máxima, este "
+             "caminho tem o maior gargalo possível entre todos os "
+             "caminhos do grafo completo: a ligação com a evasão passa "
+             "pelos atributos intermediários.")
+    else:
+        nota("Vizinho direto do Desfecho: a dependência com a evasão "
+             "não passa por nenhum outro atributo.")
 
 
 def pagina_g3() -> None:
@@ -843,16 +926,17 @@ def pagina_g3() -> None:
                 f"{pct(virada['taxa_depois'])}", border=True,
                 help=f"{virada['arco'][0]} → {virada['arco'][1]} "
                 f"({virada['n']} alunos)")
-    st.caption("As trajetórias e o ponto de virada usam o caminho "
+    nota("As trajetórias e o ponto de virada usam o caminho "
                "completo e são iguais nos três momentos. Fonte das "
                "métricas: `outputs/resultados.json`.")
-    with st.expander("Trajetórias e ordem topológica de Kahn"):
-        st.markdown(
-            f"- **Risco:** {' → '.join(risco['caminho'])}\n"
-            f"- **Segura:** {' → '.join(segura['caminho'])}\n"
-            f"- **Virada:** {virada['arco'][0]} → {virada['arco'][1]}\n"
-            f"- **Ordem de Kahn:** "
-            f"{' → '.join(resultado['ordem_topologica'])}")
+    if not apresentacao():
+        with st.expander("Trajetórias e ordem topológica de Kahn"):
+            st.markdown(
+                f"- **Risco:** {' → '.join(risco['caminho'])}\n"
+                f"- **Segura:** {' → '.join(segura['caminho'])}\n"
+                f"- **Virada:** {virada['arco'][0]} → {virada['arco'][1]}\n"
+                f"- **Ordem de Kahn:** "
+                f"{' → '.join(resultado['ordem_topologica'])}")
 
 
 def simular_caminho(modelo: DagTrajetorias,
@@ -922,16 +1006,14 @@ def resultado_simulacao(modelo: DagTrajetorias, linhas: list,
                  else "a taxa geral do treino")
         st.warning(f"Menos de {modelo.min_suporte} alunos com este trecho: "
                    f"o preditor usa {usado}.")
-    with st.expander("Caminho simulado, passo a passo"):
-        st.dataframe(pd.DataFrame(linhas), hide_index=True,
-                     width="stretch",
-                     column_config={
-                         "evasão no arco": st.column_config.ProgressColumn(
-                             format="percent", min_value=0, max_value=1),
-                         "evasão no caminho":
-                             st.column_config.ProgressColumn(
-                                 format="percent", min_value=0,
-                                 max_value=1)})
+    if not apresentacao():
+        with st.expander("Caminho simulado, passo a passo"):
+            barra = st.column_config.ProgressColumn(
+                format="percent", min_value=0, max_value=1)
+            st.dataframe(pd.DataFrame(linhas), hide_index=True,
+                         width="stretch",
+                         column_config={"evasão no arco": barra,
+                                        "evasão no caminho": barra})
 
 
 # ----------------------------------------------------------------------
@@ -950,7 +1032,12 @@ def main() -> None:
         st.Page(pagina_g3, title="G3 · DAG de trajetórias",
                 icon=":material/route:", url_path="g3"),
     ]
-    st.navigation(paginas).run()
+    pagina = st.navigation(paginas)
+    st.sidebar.toggle(
+        ":material/slideshow: Modo apresentação", key="apresentacao",
+        help="Esconde os quadros de leitura, os detalhes e as notas e "
+        "aumenta os grafos. Para projetor ou vídeo.")
+    pagina.run()
 
 
 if __name__ == "__main__":

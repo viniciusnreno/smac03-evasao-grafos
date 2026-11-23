@@ -10,23 +10,25 @@ a página funciona sem internet, o que importa na apresentação.
 
 import json
 import math
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Hashable, Mapping
 from functools import lru_cache
 from pathlib import Path
 
 import pyvis
 
-from figuras import ROTULOS
+from figuras import COR_AUMENTA, COR_DIMINUI, CORES_GRUPO, ROTULOS
 from grafo import Grafo
 
-# Paleta (vermelho/azul distinguíveis por daltônicos, mais neutros).
-COR_EVASAO = "#d1495b"
-COR_FORMATURA = "#2e86ab"
+# Paleta: a mesma das figuras do relatório (figuras.py), para que a
+# interface, o PDF e os slides falem a mesma língua visual.
+COR_EVASAO = COR_AUMENTA            # "aumenta a evasão" nas figuras
+COR_FORMATURA = COR_DIMINUI         # "diminui a evasão"
 COR_NEUTRA = "#a7b1bc"
-COR_DESTAQUE = "#f4a259"
-COR_SEGURA = "#3a9e5d"
-COR_TEXTO = "#1f2933"
+COR_DESTAQUE = CORES_GRUPO["ingresso"]   # laranja das figuras
+COR_SEGURA = CORES_GRUPO["macro"]        # verde das figuras
+COR_TEXTO = "#222222"               # texto das figuras
 COR_ARESTA = "#c3ccd5"
+COR_ARESTA_ARVORE = "#7b8794"   # arestas do G2 (a cor fica nos vértices)
 COR_FUTURO = "#e9edf1"     # camadas ainda não observadas no momento
 FUNDO_ESCURO = "#0f1419"   # mesmo fundo do tema escuro (.streamlit)
 TEXTO_ESCURO = "#e6eaee"
@@ -81,9 +83,8 @@ def numero(x: float, casas: int = 2) -> str:
 class MontadorVisual:
     """Converte os grafos do projeto em HTML interativo.
 
-    Cada método ``*_g2``, ``*_g3`` e
-    ``passo_kruskal`` devolve ``(vertices, arestas, opcoes)``, que
-    ``html`` transforma na página. Os vértices e arestas seguem o
+    ``dag_g3`` devolve ``(vertices, arestas, opcoes)``, que ``html``
+    transforma na página. Os vértices e arestas seguem o
     formato do vis-network (``id``, ``label``, ``color``, ``from``,
     ``to``...).
     """
@@ -161,127 +162,6 @@ class MontadorVisual:
         return opcoes
 
     # ------------------------------------------------------------------
-    # G2 · árvore de dependências
-    # ------------------------------------------------------------------
-    def arvore_g2(self, arestas_arvore: Iterable[tuple[str, str, float]],
-                  vertices: Iterable[str], desfecho: str,
-                  estabilidade: Mapping[tuple[str, str], float]
-                  | None = None) -> tuple:
-        """Árvore de IM: espessura = IM, opacidade = estabilidade."""
-        arestas_arvore = list(arestas_arvore)
-        estabilidade = estabilidade or {}
-        vizinhos = {u if v == desfecho else v for u, v, _ in arestas_arvore
-                    if desfecho in (u, v)}
-        maior = max((p for _, _, p in arestas_arvore), default=1.0)
-        nos = []
-        for v in vertices:
-            if v == desfecho:
-                nos.append({"id": v, "label": "Desfecho", "shape": "box",
-                            "color": {"background": COR_EVASAO,
-                                      "border": COR_EVASAO},
-                            "font": {"color": "#ffffff", "size": 20},
-                            "fixed": True, "x": 0, "y": 0,
-                            "title": "vértice do desfecho (evadiu?)"})
-            else:
-                destaque = v in vizinhos
-                nos.append({
-                    "id": v, "label": _rotulo_curto(ROTULOS.get(v, v)),
-                    "shape": "box" if destaque else "ellipse",
-                    "color": {"background": COR_DESTAQUE if destaque
-                              else "#eef1f4",
-                              "border": "#b26b1f" if destaque
-                              else "#9aa5b1"},
-                    "font": {"size": 15 if destaque else 12,
-                             "color": COR_TEXTO},
-                    "title": v + ("\nvizinho do Desfecho" if destaque
-                                  else ""),
-                })
-        arestas = []
-        for u, v, p in arestas_arvore:
-            est = estabilidade.get(tuple(sorted((u, v))))
-            toca = desfecho in (u, v)
-            titulo = f"{u} — {v}\nIM = {p:.4f} bits"
-            if est is not None:
-                titulo += f"\nestabilidade (bootstrap) = {est:.0%}"
-            arestas.append({
-                "from": u, "to": v,
-                **({"label": f"{numero(p, 3)} bits",
-                    "font": {"size": 15, "color": COR_EVASAO,
-                             "strokeWidth": 4, "align": "horizontal",
-                             "bold": True}}
-                   if toca else {}),
-                "width": 1 + 9 * math.sqrt(p / maior),
-                "color": {"color": COR_EVASAO if toca else "#6b7785",
-                          "opacity": 0.3 + 0.7 * (est if est is not None
-                                                  else 1.0)},
-                "title": titulo,
-            })
-        opcoes = self._opcoes(fisica=True)
-        opcoes["physics"]["forceAtlas2Based"]["springLength"] = 90
-        return nos, arestas, opcoes
-
-    # ------------------------------------------------------------------
-    # G2 · um passo do Kruskal
-    # ------------------------------------------------------------------
-    def passo_kruskal(self, vertices: list[str], desfecho: str,
-                      aceitas: Iterable[tuple[str, str, float]],
-                      atual: tuple[str, str, float, bool] | None,
-                      componentes: Mapping[str, Hashable]) -> tuple:
-        """Estado do Kruskal: árvore parcial, aresta da vez e componentes.
-
-        Vértices em círculo fixo (o Desfecho no centro) para o desenho
-        não mudar entre os passos. Cada componente do union-find com
-        mais de um vértice ganha uma cor.
-        """
-        tamanhos: dict[Hashable, int] = {}
-        for r in componentes.values():
-            tamanhos[r] = tamanhos.get(r, 0) + 1
-        cores: dict[Hashable, str] = {}
-        for v in vertices:
-            r = componentes[v]
-            if tamanhos[r] > 1 and r not in cores:
-                cores[r] = CORES_COMPONENTES[
-                    len(cores) % len(CORES_COMPONENTES)]
-
-        outros = [v for v in vertices if v != desfecho]
-        raio_x, raio_y = 520, 330
-        nos = []
-        for i, v in enumerate(outros):
-            ang = 2 * math.pi * i / len(outros)
-            cor = cores.get(componentes[v], "#eef1f4")
-            rotulo = _rotulo_curto(ROTULOS.get(v, v), 18)
-            nos.append({"id": v, "label": rotulo,
-                        "x": raio_x * math.cos(ang),
-                        "y": raio_y * math.sin(ang), "shape": "dot",
-                        "size": 9, "color": {"background": cor,
-                                             "border": "#6b7785"},
-                        "font": {"size": 11}, "title": v})
-        cor_d = cores.get(componentes[desfecho], "#eef1f4")
-        nos.append({"id": desfecho, "label": "Desfecho", "x": 0, "y": 0,
-                    "shape": "box",
-                    "font": {"size": 16, "color": COR_TEXTO},
-                    "color": {"background": cor_d,
-                              "border": COR_EVASAO},
-                    "borderWidth": 3})
-
-        arestas = [{"from": u, "to": v, "width": 2.5,
-                    "color": {"color": "#4a5560"},
-                    "title": f"{u} — {v}\nIM = {p:.4f}"}
-                   for u, v, p in aceitas]
-        if atual is not None:
-            u, v, p, aceita = atual
-            arestas.append({
-                "from": u, "to": v, "width": 6,
-                "color": {"color": COR_SEGURA if aceita else COR_EVASAO},
-                "dashes": not aceita,
-                "label": numero(p, 3),
-                "font": {"size": 14, "strokeWidth": 4},
-                "title": ("aceita: une dois componentes" if aceita else
-                          "rejeitada: fecharia um ciclo"),
-            })
-        return nos, arestas, self._opcoes(fisica=False, fixo=True)
-
-    # ------------------------------------------------------------------
     # G3 · DAG de trajetórias
     # ------------------------------------------------------------------
     def dag_g3(self, grafo: Grafo, ordem: list[str],
@@ -306,7 +186,7 @@ class MontadorVisual:
         posicao_kahn = {v: i for i, v in enumerate(ordem)}
         camadas: dict[int, list[str]] = {}
         for v in grafo.vertices():
-            camadas.setdefault(self._camada(v), []).append(v)
+            camadas.setdefault(_camada(v), []).append(v)
 
         def taxa(v: str) -> float:
             return evasoes[v] / contagem[v] if contagem[v] else 0.0
@@ -327,7 +207,7 @@ class MontadorVisual:
         ultima = max(camadas)
 
         def futuro(v: str) -> bool:
-            c = self._camada(v)
+            c = _camada(v)
             return conhecidas is not None and conhecidas < c < ultima
 
         maior = max(contagem.values())
@@ -355,7 +235,7 @@ class MontadorVisual:
                 "x": x, "y": y, "shape": "dot",
                 "size": 8 + 22 * math.sqrt(contagem[v] / maior),
                 "color": {"background": cor_risco(t),
-                          "border": COR_TEXTO if v in no_caminho
+                          "border": self.texto if v in no_caminho
                           else "#6b7785"},
                 "borderWidth": 3 if v in no_caminho else 1,
                 "font": {"size": 12, "vadjust": -4},
@@ -401,13 +281,6 @@ class MontadorVisual:
                                      "forceDirection": "horizontal",
                                      "roundness": 0.4}
         return nos, arestas, opcoes
-
-    @staticmethod
-    def _camada(estado: str) -> int:
-        """INICIO = 0, L0 = 1, ..., L4 = 5."""
-        if ":" not in estado:
-            return 0
-        return int(estado.split(":", 1)[0][1:]) + 1
 
 
 class GrafoECharts:
@@ -539,3 +412,134 @@ class GrafoECharts:
                       "fontWeight": "bold" if central else "normal"},
             "tooltip": {"formatter": f"<b>aluno {v}</b><br/>{papel}"},
         }
+    def arvore_g2(self, posicoes: Mapping[str, tuple[float, float]],
+                  desfecho: str, aceitas: list[tuple[str, str, float]],
+                  componentes: Mapping[str, Hashable],
+                  estabilidade: Mapping[tuple[str, str], float],
+                  caminho: list[tuple[str, str, float]] | None = None,
+                  gargalo: tuple[str, str, float] | None = None,
+                  ) -> tuple[dict, list[str]]:
+        """Floresta do Kruskal num ponto da régua, em layout radial.
+
+        Args:
+            posicoes: ``ExploradorArvore.layout_radial`` (fixas, para o
+                desenho não pular quando a régua anda).
+            desfecho: vértice do centro.
+            aceitas: arestas já aceitas pelo Kruskal até a régua.
+            componentes: vértice → representante no union-find.
+            estabilidade: par ordenado → fração de bootstraps.
+            caminho: caminho de um atributo até o Desfecho (destacado
+                em laranja; tracejado onde a régua ainda não chegou).
+            gargalo: aresta de menor IM do caminho.
+
+        Returns:
+            ``(opcao, vertices)``: ``vertices[i]`` é o atributo do
+            índice ``i`` em ``data`` (para ler o clique).
+        """
+        tamanho: dict[Hashable, int] = {}
+        for r in componentes.values():
+            tamanho[r] = tamanho.get(r, 0) + 1
+        raiz_desfecho = componentes[desfecho]
+        paleta = [c for c in CORES_COMPONENTES if c != "#e15759"]
+        cores: dict[Hashable, str] = {}
+        for v in sorted(posicoes, key=str):
+            r = componentes[v]
+            if tamanho[r] > 1 and r != raiz_desfecho and r not in cores:
+                cores[r] = paleta[len(cores) % len(paleta)]
+        cor_ligado = _mistura(COR_EVASAO, "#ffffff", 0.35)
+
+        def cor(v: str) -> str:
+            r = componentes[v]
+            if r == raiz_desfecho:
+                return cor_ligado
+            return cores.get(r, COR_NEUTRA)
+
+        no_caminho = {x for u, v, _ in caminho or [] for x in (u, v)}
+        vertices = list(posicoes)
+        nos = []
+        for v in vertices:
+            x, y = posicoes[v]
+            central = v == desfecho
+            nos.append({
+                "id": v, "name": "Desfecho" if central
+                else ROTULOS.get(v, v),
+                "x": x, "y": y,
+                "symbolSize": 26 if central else 13,
+                "itemStyle": {
+                    "color": COR_EVASAO if central else cor(v),
+                    "borderColor": COR_DESTAQUE if v in no_caminho
+                    else self.contorno,
+                    "borderWidth": 3 if v in no_caminho else 0.6},
+                "label": {
+                    "position": "bottom" if central
+                    else ("right" if x >= 0 else "left"),
+                    "color": COR_EVASAO if central else None,
+                    "fontSize": 14 if central else 10,
+                    "fontWeight": "bold" if central else "normal"},
+                "tooltip": {"formatter": f"<b>{ROTULOS.get(v, v)}</b>"
+                            f"<br/>{v}"},
+            })
+        maior = max((p for _, _, p in aceitas), default=1.0) or 1.0
+        aceitas_chave = {frozenset((u, v)) for u, v, _ in aceitas}
+        no_cam = {frozenset((u, v)): p for u, v, p in caminho or []}
+        chave_gargalo = (frozenset(gargalo[:2]) if gargalo is not None
+                         else None)
+        ultima = frozenset(aceitas[-1][:2]) if aceitas else None
+        links = []
+        for u, v, p in aceitas:
+            chave = frozenset((u, v))
+            if chave in no_cam:
+                continue
+            est = estabilidade.get(tuple(sorted((u, v))), 1.0)
+            links.append({
+                "source": u, "target": v,
+                "lineStyle": {
+                    "width": 1 + 7 * math.sqrt(p / maior),
+                    "color": COR_ARESTA_ARVORE,
+                    "opacity": 0.3 + 0.6 * est},
+                "label": {"show": chave == ultima,
+                          "formatter": f"{numero(p, 3)} bits"},
+                "tooltip": {"formatter": f"{ROTULOS.get(u, u)} — "
+                            f"{ROTULOS.get(v, v)}<br/>IM = "
+                            f"{numero(p, 4)} bits<br/>estabilidade "
+                            f"{numero(100 * est, 0)}%"},
+            })
+        for u, v, p in caminho or []:
+            chave = frozenset((u, v))
+            e_gargalo = chave == chave_gargalo
+            links.append({
+                "source": u, "target": v,
+                "lineStyle": {
+                    "width": 6 if e_gargalo else 4, "color": COR_DESTAQUE,
+                    "opacity": 1,
+                    "type": "solid" if chave in aceitas_chave
+                    else "dashed"},
+                "label": {"show": True, "fontWeight": "bold",
+                          "formatter": ("gargalo · " if e_gargalo else "")
+                          + f"{numero(p, 3)} bits"},
+                "tooltip": {"formatter": f"{ROTULOS.get(u, u)} — "
+                            f"{ROTULOS.get(v, v)}<br/>IM = "
+                            f"{numero(p, 4)} bits"
+                            + ("<br/><b>gargalo do caminho</b>"
+                               if e_gargalo else "")},
+            })
+        opcao = {
+            "tooltip": {"show": True, "confine": True},
+            "series": [{
+                "type": "graph", "layout": "none", "roam": True,
+                "draggable": True, "selectedMode": "single",
+                "label": {"show": True, "fontSize": 10},
+                "edgeLabel": {"fontSize": 11},
+                "emphasis": {"focus": "adjacency"},
+                "select": {"itemStyle": {"borderColor": COR_DESTAQUE,
+                                         "borderWidth": 4}},
+                "data": nos, "links": links,
+            }],
+        }
+        return opcao, vertices
+
+def _camada(estado: str) -> int:
+    """Coluna do estado no DAG: INICIO = 0, L0 = 1, ..., L4 = 5."""
+    if ":" not in estado:
+        return 0
+    return int(estado.split(":", 1)[0][1:]) + 1
