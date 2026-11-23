@@ -1,8 +1,5 @@
 """G1: grafo de similaridade. Classe: ``GrafoSimilaridade(ModeloGrafo)``.
 
-Responsável: Carlos (implementado por Rafael enquanto Carlos não
-iniciava a etapa).
-
 - ``construir``: distância de Gower ponderada pela informação mútua
   (só treino) e kNN com capacidade c(i, j) = 1 - d(i, j).
 - ``executar``: chama ``ClassificadorCorteMinimo`` e devolve as

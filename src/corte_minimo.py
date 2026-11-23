@@ -1,7 +1,5 @@
 """G1: fluxo máximo e classificação pelo corte mínimo.
 
-Responsável: Rafael.
-
 Duas classes:
 
 - ``EdmondsKarp``: algoritmo genérico de fluxo máximo (Ford-Fulkerson

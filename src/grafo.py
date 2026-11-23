@@ -3,8 +3,6 @@
 Lista de adjacência com peso: ``_adj[u][v]`` é o peso (ou a capacidade)
 da aresta u -> v. Vértices podem ser de qualquer tipo hashable: ``int``
 para alunos (G1) e ``str`` para atributos (G2) e estados (G3).
-
-Responsável: Rafael.
 """
 
 from collections.abc import Hashable, Iterator, Mapping

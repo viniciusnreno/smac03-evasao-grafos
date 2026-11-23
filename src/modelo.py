@@ -3,8 +3,6 @@
 Permite que o ``Pipeline`` e a futura interface gráfica tratem todos os
 modelos do mesmo jeito: construir o grafo, executar o algoritmo e
 destacar o resultado na tela.
-
-Responsável: Rafael.
 """
 
 from abc import ABC, abstractmethod

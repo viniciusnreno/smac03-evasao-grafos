@@ -1,7 +1,5 @@
 """Figuras do relatório em PDF vetorial. Classe: ``GeradorFiguras``.
 
-Responsável: Rafael.
-
 - Fig. 3 (``fig-lift.pdf``): lift da evasão no treino (barra) e no
   teste (ponto), por fator (H2).
 - Fig. 4 (``fig-ablacao.pdf``): Δ da acurácia balanceada do corte

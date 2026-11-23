@@ -20,37 +20,68 @@ Requisitos: Python 3.12 e Git. O repositório é privado: peça ao dono para ser
 ```bash
 git clone git@github.com:viniciusnreno/smac03-evasao-grafos.git
 cd smac03-evasao-grafos
-python -m venv .venv
+python -m venv .venv             # cria o ambiente virtual em .venv/
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+O ambiente virtual fica em `.venv/`, que o git ignora. Em cada terminal novo, ative-o de novo (`source .venv/bin/activate`) antes de rodar os comandos abaixo.
+
 ## Execução
 
+Todos os comandos partem da raiz do repositório, com o ambiente virtual ativado.
+
+### Abrir a interface (Streamlit)
+
 ```bash
-python src/main.py
+streamlit run src/app.py
 ```
 
-Em construção: os módulos de `src/` ainda são esqueletos.
+O navegador abre em `http://localhost:8501` (porta padrão do Streamlit). A interface lê os resultados de `outputs/`, que já vêm versionados, então não é preciso rodar o pipeline antes. Para encerrar, use `Ctrl+C` no terminal.
+
+### Rodar o pipeline
+
+```bash
+python src/main.py            # completo
+python src/main.py --rapido   # sem ablação, backward e robustez (cerca de 2 min)
+```
+
+Roda G1, G2 e G3, avalia no teste uma única vez e grava os resultados em `outputs/`, sobrescrevendo os arquivos versionados. O modo `--rapido` não regrava os arquivos da ablação, do backward e da robustez.
+
+### Gerar as figuras do relatório
+
+```bash
+python src/figuras.py         # PDFs vetoriais em relatorio/figs/
+```
+
+Usa os resultados de `outputs/` e regrava `outputs/fatores_*`.
 
 ## Estrutura
 
 ```
-data/data.csv
+data/
+└── data.csv                    # dataset UCI 697 (separador ";")
 src/
-├── grafo.py                # classe Grafo (base comum)
-├── modelo.py               # classe abstrata ModeloGrafo (base comum)
-├── dados.py                # Rafael
-├── grafo_similaridade.py   # Carlos
-├── corte_minimo.py         # Rafael (Edmonds–Karp próprio)
-├── arvore_dependencias.py  # Carlos (Kruskal)
-├── dag_trajetorias.py      # Carlos (Kahn + Bellman-Ford)
-├── avaliacao.py            # Rafael
-├── figuras.py              # Rafael
-└── main.py                 # Carlos
-outputs/                    # resultados e figuras gerados
-relatorio/                  # projeto LaTeX (Overleaf)
-slides/
+├── grafo.py                    # classe Grafo: lista de adjacência com peso, dirigida ou não
+├── modelo.py                   # classe abstrata ModeloGrafo (construir, executar, destaques)
+├── dados.py                    # BaseDeDados: carga, filtro de Enrolled, divisão 80/20 e momentos
+├── grafo_similaridade.py       # G1: grafo de similaridade (Gower + kNN)
+├── corte_minimo.py             # G1: Edmonds–Karp e classificação pelo corte mínimo
+├── arvore_dependencias.py      # G2: árvore geradora máxima de informação mútua (Kruskal)
+├── dag_trajetorias.py          # G3: DAG de trajetórias (Kahn + Bellman-Ford)
+├── avaliacao.py                # Avaliador: CV, teste, bootstrap, McNemar com Holm e ablação
+├── fatores.py                  # AnaliseFatores: lift e informação mútua dos fatores
+├── figuras.py                  # GeradorFiguras: figuras do relatório em PDF vetorial
+├── main.py                     # Pipeline: roda G1, G2, G3 e a avaliação, grava em outputs/
+├── app.py                      # interface gráfica em Streamlit
+├── visual.py                   # desenho dos grafos na interface (vis-network)
+├── passo_a_passo.py            # Kruskal passo a passo na interface
+└── explicacao.py               # explicação das arestas do G1 na interface
+outputs/                        # resultados do pipeline (CSV e JSON), lidos pela interface
+relatorio/                      # projeto LaTeX do relatório
+slides/                         # apresentação (apresentacao.pptx e gerar_slides.js)
+.streamlit/config.toml          # tema da interface
+requirements.txt                # dependências, com versões fixas
 ```
 
-**Atenção:** `relatorio/` e `slides/` ainda trazem o conteúdo do modelo v1 (Louvain e comunidades), que foi descartado. Serão reescritos conforme o plano v3.
+**Atenção:** `relatorio/` e `slides/` ainda trazem partes do modelo v1 (Louvain e comunidades), que foi descartado, e serão reescritos.

@@ -1,7 +1,5 @@
 """Avaliação. Classe: ``Avaliador``.
 
-Responsável: Rafael.
-
 Protocolo do relatório (seções 3 e 4):
 
 - CV estratificada de 5 dobras **só no treino** para comparar métodos,
