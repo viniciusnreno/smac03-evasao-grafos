@@ -83,5 +83,3 @@ slides/                         # apresentação (apresentacao.pptx e gerar_slid
 .streamlit/config.toml          # tema da interface
 requirements.txt                # dependências, com versões fixas
 ```
-
-**Atenção:** `relatorio/` e `slides/` ainda trazem partes do modelo v1 (Louvain e comunidades), que foi descartado, e serão reescritos.
