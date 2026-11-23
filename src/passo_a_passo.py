@@ -1,159 +1,25 @@
-"""Demonstrações passo a passo do Edmonds–Karp e do Kruskal.
+"""Kruskal na interface: passos, régua de IM e caminhos na árvore.
 
-As duas classes rodam os algoritmos do projeto (não os reimplementam)
-e devolvem a lista de passos que a interface anima. Não dependem do
-Streamlit.
+- ``DemoKruskal`` roda o algoritmo do projeto (não o reimplementa):
+  lê a árvore devolvida por ``ArvoreDependencias.kruskal`` e
+  reconstitui a ordem em que as arestas foram examinadas. A decisão
+  (aceita ou rejeita) vem da saída oficial; o ``UniaoBusca`` só
+  acompanha os componentes e confirma que cada rejeitada fecharia um
+  ciclo.
+- ``ExploradorArvore`` responde às perguntas da tela: o estado do
+  Kruskal quando a régua de IM está num ponto (floresta, componentes,
+  rejeitadas), o caminho único de um atributo até o Desfecho com o seu
+  gargalo e um layout radial com o Desfecho no centro.
 
-- ``DemoEdmondsKarp``: rede pequena com alunos reais do treino; usa o
-  ``ClassificadorCorteMinimo`` com ``registrar=True`` e refaz a rede
-  residual depois de cada caminho aumentante.
-- ``DemoKruskal``: lê a árvore devolvida por
-  ``ArvoreDependencias.kruskal`` e reconstitui a ordem em que as
-  arestas foram examinadas. A decisão (aceita ou rejeita) vem da saída
-  oficial; o ``UniaoBusca`` só acompanha os componentes para colorir o
-  desenho e confirmar que cada rejeitada fecharia um ciclo.
+Não dependem do Streamlit.
 """
 
-from collections.abc import Hashable, Mapping
-
-import numpy as np
+import math
+from collections import deque
 
 from arvore_dependencias import ArvoreDependencias, UniaoBusca
-from corte_minimo import FONTE, ClassificadorCorteMinimo
-from dados import SEMENTE
-from grafo import Grafo
-from grafo_similaridade import GrafoSimilaridade
 
-Residual = dict[Hashable, dict[Hashable, float]]
-
-
-class DemoEdmondsKarp:
-    """Edmonds–Karp (aula 6) numa rede pequena do G1, passo a passo.
-
-    Sorteia (semente 42) alunos do **treino**: metade dos rotulados
-    evadiu e metade formou; os "sem rótulo" também vêm do treino, então
-    o desfecho real deles pode ser mostrado sem tocar no teste. A rede
-    é montada sem contração (``contrair=False``), para S e T aparecerem
-    ligados aos rotulados por arcos de capacidade infinita.
-
-    Garantia mostrada: cada caminho aumentante é o mais curto em número
-    de arcos (BFS); o fluxo máximo é igual à capacidade do corte mínimo
-    encontrado pela BFS final na rede residual.
-    """
-
-    def __init__(self, momento: str = "T1", n_rotulados: int = 8,
-                 n_sem_rotulo: int = 6, k: int = 3, lam: float = 1.0,
-                 semente: int = SEMENTE) -> None:
-        if n_rotulados < 2 or n_sem_rotulo < 1:
-            raise ValueError("a demonstração precisa de rotulados das "
-                             "duas classes e de um aluno sem rótulo")
-        self.momento = momento
-        self.n_rotulados = n_rotulados
-        self.n_sem_rotulo = n_sem_rotulo
-        self.k = k
-        self.lam = lam
-        self.semente = semente
-
-    def executar(self, base,
-                 pesos: Mapping[str, float] | None = None) -> dict:
-        """Roda o corte mínimo e devolve a rede e os passos.
-
-        Args:
-            base: ``BaseDeDados``.
-            pesos: pesos de Gower; use os do G1 oficial (informação
-                mútua no treino inteiro). ``None`` recalcula a IM só
-                com os poucos alunos sorteados, o que é instável.
-
-        Chaves: ``rede``, ``grafo`` (similaridade), ``rotulos``
-        (conhecidos), ``sem_rotulo``, ``real`` (desfecho real de
-        todos), ``passos`` (lista de dicts com ``caminho``,
-        ``gargalo``, ``fluxo`` acumulado e ``residual``), ``fluxo``,
-        ``lado_s``, ``previsoes`` e ``capacidade_corte``.
-        """
-        rotulados, sem_rotulo = self._sortear(base)
-        modelo = GrafoSimilaridade(self.momento, self.k, pesos=pesos,
-                                   lam=self.lam)
-        grafo = modelo.construir(base, rotulados, sem_rotulo)
-        classificador = ClassificadorCorteMinimo(
-            lam=self.lam, contrair=False, registrar=True)
-        previsoes = classificador.classificar(
-            grafo, modelo.rotulos_, sem_rotulo)
-        rede = classificador.rede
-
-        residual = self.residual_inicial(rede)
-        passos = [{"caminho": [], "gargalo": 0.0, "fluxo": 0.0,
-                   "residual": self._copiar(residual)}]
-        fluxo = 0.0
-        for registro in classificador.historico:
-            g = registro["gargalo"]
-            for u, v in registro["caminho"]:
-                residual[u][v] -= g
-                residual[v][u] += g
-            fluxo += g
-            passos.append({"caminho": registro["caminho"], "gargalo": g,
-                           "fluxo": fluxo,
-                           "residual": self._copiar(residual)})
-
-        lado_s = self.alcancaveis(residual, FONTE)
-        capacidade_corte = sum(
-            c for u, v, c in rede.arestas()
-            if u in lado_s and v not in lado_s)
-        idx = [*rotulados, *sem_rotulo]
-        return {
-            "rede": rede,
-            "grafo": grafo,
-            "rotulos": dict(modelo.rotulos_),
-            "sem_rotulo": list(sem_rotulo),
-            "real": dict(zip(idx, map(bool, base.y(idx)))),
-            "passos": passos,
-            "fluxo": classificador.fluxo,
-            "lado_s": lado_s,
-            "previsoes": previsoes,
-            "capacidade_corte": capacidade_corte,
-        }
-
-    def _sortear(self, base) -> tuple[list[int], list[int]]:
-        """Alunos do treino: rotulados equilibrados e os sem rótulo."""
-        rng = np.random.default_rng(self.semente)
-        treino = np.array(base.idx_treino)
-        y = base.y(treino.tolist())
-        evadiu = rng.permutation(treino[y])
-        formou = rng.permutation(treino[~y])
-        meio = self.n_rotulados // 2
-        rotulados = [*evadiu[:meio], *formou[:self.n_rotulados - meio]]
-        meio_t = self.n_sem_rotulo // 2
-        sem_rotulo = [*evadiu[meio:meio + meio_t],
-                      *formou[self.n_rotulados - meio:
-                              self.n_rotulados - meio
-                              + self.n_sem_rotulo - meio_t]]
-        return (sorted(int(i) for i in rotulados),
-                sorted(int(i) for i in sem_rotulo))
-
-    @staticmethod
-    def residual_inicial(rede: Grafo) -> Residual:
-        """Folgas iniciais: capacidade em cada arco e 0 no de volta."""
-        residual: Residual = {v: {} for v in rede.vertices()}
-        for u, v, c in rede.arestas():
-            residual[u][v] = residual[u].get(v, 0.0) + c
-            residual[v].setdefault(u, 0.0)
-        return residual
-
-    @staticmethod
-    def alcancaveis(residual: Residual, s: Hashable) -> set[Hashable]:
-        """Vértices com folga positiva a partir de ``s`` (lado S)."""
-        vistos = {s}
-        pilha = [s]
-        while pilha:
-            u = pilha.pop()
-            for v, folga in residual[u].items():
-                if folga > 1e-12 and v not in vistos:
-                    vistos.add(v)
-                    pilha.append(v)
-        return vistos
-
-    @staticmethod
-    def _copiar(residual: Residual) -> Residual:
-        return {u: dict(viz) for u, viz in residual.items()}
+Aresta = tuple[str, str, float]
 
 
 class DemoKruskal:
@@ -214,3 +80,140 @@ class DemoKruskal:
         return {"vertices": vertices, "passos": passos,
                 "num_examinadas": len(passos),
                 "num_arestas_completo": len(arestas)}
+
+
+class ExploradorArvore:
+    """Consultas sobre a árvore geradora máxima do G2.
+
+    Args:
+        arvore: arestas ``(u, v, IM)`` devolvidas pelo Kruskal.
+        desfecho: vértice do desfecho (raiz do layout e dos caminhos).
+    """
+
+    def __init__(self, arvore: list[Aresta], desfecho: str) -> None:
+        self.arvore = list(arvore)
+        self.desfecho = desfecho
+        self._viz: dict[str, dict[str, float]] = {desfecho: {}}
+        for u, v, p in self.arvore:
+            self._viz.setdefault(u, {})[v] = p
+            self._viz.setdefault(v, {})[u] = p
+        self._pai, self._profundidade = self._bfs()
+
+    # ------------------------------------------------------------------
+    # Régua de IM
+    # ------------------------------------------------------------------
+    @staticmethod
+    def regua(passos: list[dict], k: int) -> dict:
+        """Estado do Kruskal logo depois de aceitar a ``k``-ésima aresta.
+
+        ``passos`` vem de ``DemoKruskal.executar``. Como o Kruskal
+        examina as arestas da maior para a menor IM, a floresta nesse
+        ponto tem as arestas da árvore com IM acima da ``k``-ésima
+        aceita (o ``limiar``); nos empates de IM vale a ordem do
+        Kruskal (desempate pelo nome).
+
+        Devolve ``limiar``, ``aceitas`` (as ``k`` arestas, na ordem),
+        ``componentes`` (vértice → representante no union-find) e
+        ``rejeitadas`` (candidatas descartadas até ali por fecharem
+        ciclo).
+        """
+        aceitas: list[Aresta] = []
+        rejeitadas = 0
+        for passo in passos:
+            if passo["aceita"]:
+                aceitas.append((passo["u"], passo["v"], passo["peso"]))
+                if len(aceitas) == k:
+                    return {"limiar": passo["peso"], "aceitas": aceitas,
+                            "componentes": passo["componentes"],
+                            "rejeitadas": rejeitadas}
+            else:
+                rejeitadas += 1
+        raise ValueError(f"a árvore tem menos de {k} arestas")
+
+    # ------------------------------------------------------------------
+    # Caminho até o Desfecho
+    # ------------------------------------------------------------------
+    def caminho(self, origem: str) -> list[Aresta]:
+        """Arestas do caminho único de ``origem`` até o Desfecho.
+
+        Numa árvore o caminho entre dois vértices é único; ele sai dos
+        ponteiros de pai da BFS feita a partir do Desfecho.
+        """
+        if origem not in self._pai:
+            raise KeyError(origem)
+        arestas = []
+        v = origem
+        while v != self.desfecho:
+            pai = self._pai[v]
+            arestas.append((v, pai, self._viz[v][pai]))
+            v = pai
+        return arestas
+
+    @staticmethod
+    def gargalo(caminho: list[Aresta]) -> Aresta | None:
+        """Aresta de menor IM do caminho (a ligação mais fraca).
+
+        Garantia da árvore geradora máxima: entre dois vértices, o
+        caminho na árvore tem o maior gargalo possível entre todos os
+        caminhos do grafo completo (propriedade minimax).
+        """
+        return min(caminho, key=lambda a: a[2]) if caminho else None
+
+    def profundidade(self, v: str) -> int:
+        """Nº de arestas entre ``v`` e o Desfecho na árvore."""
+        return self._profundidade[v]
+
+    # ------------------------------------------------------------------
+    # Layout radial
+    # ------------------------------------------------------------------
+    def layout_radial(self, raio: float = 150.0) -> dict[str, tuple]:
+        """Posições ``(x, y)`` com o Desfecho no centro.
+
+        Cada anel é uma distância (em arestas) até o Desfecho. Cada
+        ramo ocupa uma fatia de ângulo própria (proporcional à raiz do
+        tamanho do ramo, para ramos pequenos não ficarem espremidos), e
+        os descendentes ficam dentro da fatia: os ramos não se cruzam.
+        """
+        filhos: dict[str, list[str]] = {v: [] for v in self._pai}
+        for v, pai in self._pai.items():
+            if pai is not None:
+                filhos[pai].append(v)
+        for v in filhos:
+            filhos[v].sort(key=lambda f: -self._viz[v][f])
+        tamanho: dict[str, int] = {}
+
+        def contar(v: str) -> int:
+            tamanho[v] = 1 + sum(contar(f) for f in filhos[v])
+            return tamanho[v]
+
+        contar(self.desfecho)
+        peso = {v: math.sqrt(n) for v, n in tamanho.items()}
+        posicoes = {self.desfecho: (0.0, 0.0)}
+
+        def posicionar(v: str, inicio: float, fim: float) -> None:
+            angulo = inicio
+            soma = sum(peso[f] for f in filhos[v])
+            for f in filhos[v]:
+                fatia = (fim - inicio) * peso[f] / soma
+                meio = angulo + fatia / 2
+                r = raio * (self._profundidade[f] + 0.6)
+                posicoes[f] = (r * math.cos(meio), r * math.sin(meio))
+                posicionar(f, angulo, angulo + fatia)
+                angulo += fatia
+
+        posicionar(self.desfecho, -math.pi / 2, 3 * math.pi / 2)
+        return posicoes
+
+    def _bfs(self) -> tuple[dict, dict]:
+        """Pai e profundidade de cada vértice a partir do Desfecho."""
+        pai: dict[str, str | None] = {self.desfecho: None}
+        profundidade = {self.desfecho: 0}
+        fila = deque([self.desfecho])
+        while fila:
+            u = fila.popleft()
+            for v in self._viz[u]:
+                if v not in pai:
+                    pai[v] = u
+                    profundidade[v] = profundidade[u] + 1
+                    fila.append(v)
+        return pai, profundidade
