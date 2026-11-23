@@ -220,20 +220,21 @@ A Fig. 2 (`fig:protocolo`) é gerada por `relatorio/figs/gerar_fig_protocolo.py`
 | `fatores.py` | `AnaliseFatores` | Lift treino × teste, replicação das direções e ranking de IM |
 | `figuras.py` | `GeradorFiguras` | Figuras do relatório em PDF |
 | `main.py` | `Pipeline` | Orquestra as classes e grava em `outputs/` |
-| `visual.py` | `MontadorVisual`, `GrafoECharts` | Converte grafos e destaques em desenho (vis-network) e em grafos clicáveis (ECharts) |
+| `visual.py` | `MontadorVisual`, `GrafoECharts` | Desenha o DAG do G3 (vis-network) e, clicáveis, a ego-rede do G1 e a árvore do G2 (ECharts) |
 | `explicacao.py` | `ExplicadorGower` | Decompõe a similaridade de Gower de uma aresta do G1 por atributo, com os pesos do treino; confere a soma com `GrafoSimilaridade.distancia` |
-| `passo_a_passo.py` | `DemoKruskal` | Passos do Kruskal para a animação da interface |
+| `passo_a_passo.py` | `DemoKruskal`, `ExploradorArvore` | Passos do Kruskal; estado da régua de IM, caminho até o Desfecho com gargalo e layout radial |
 | `app.py` | (funções de página) | Interface Streamlit; só tela, sem cálculo próprio |
 
 Os métodos de `Grafo`, `ModeloGrafo` e da fronteira do G1 estão fixados acima. Os demais métodos ficam a critério do dono do módulo.
 
 **Lógica separada da interface.** As classes devolvem dados; não imprimem, não plotam e não gravam arquivos fora da própria responsabilidade (só `GeradorFiguras` e `Pipeline` escrevem em disco). Assim, a interface gráfica reaproveita as mesmas classes sem mudar o núcleo.
 
-**Interface gráfica (`app.py`, bônus).** Streamlit com 4 páginas: **Resumo** (dados, os três grafos, Tab. 3, McNemar e "o que mais pesa": pesos do G1, ablação e lifts), e uma página por grafo, cada uma com o desenho, o quadro "como ler" (vértice, aresta e codificação visual) e o simulador do grafo. **G1**: ego-rede clicável de um aluno de teste com o corte; o clique mostra por que dois alunos estão ligados. **G2**: árvore final e Kruskal passo a passo, alternados no mesmo lugar. **G3**: um só DAG com as trajetórias de risco e segura, o ponto de virada e o caminho montado no simulador; o seletor T0/T1/T2 esmaece as camadas ainda não observadas, limita o simulador a elas e mostra o risco e a previsão do G3 pela mesma regra do preditor (maior trecho com suporte, limiar = taxa do treino). Regras:
+**Interface gráfica (`app.py`, bônus).** Streamlit com 4 páginas: **Resumo** (dados, os três grafos, Tab. 3, McNemar e "o que mais pesa": pesos do G1, ablação e lifts), e uma página por grafo, cada uma com o desenho, o quadro "como ler" (vértice, aresta e codificação visual) e o simulador do grafo. **G1**: ego-rede clicável de um aluno de teste com o corte; o clique mostra por que dois alunos estão ligados. **G2**: árvore em layout radial (Desfecho no centro) com uma régua de informação mútua que mostra a floresta do Kruskal em cada ponto (▶ anima a descida) e, ao clicar num atributo, o caminho único até o Desfecho com o gargalo (propriedade minimax da árvore geradora máxima, conferida contra o grafo completo). **G3**: um só DAG (vértices e arestas, em camadas) com as trajetórias de risco e segura, o ponto de virada e o caminho montado no simulador; o seletor T0/T1/T2 esmaece as camadas ainda não observadas, limita o simulador a elas e mostra o risco e a previsão do G3 pela mesma regra do preditor (maior trecho com suporte, limiar = taxa do treino). Regras:
 
 - Os modelos são refeitos na tela com os hiperparâmetros de `outputs/hiperparametros.json`; fluxo, número de arestas, peso da árvore e trajetórias são conferidos com `resultados.json`, e um aviso só aparece se divergirem. Métricas, IC e p-valores são sempre lidos de `outputs/`.
 - `DemoKruskal` **não altera o Kruskal**: lê a árvore devolvida por `ArvoreDependencias.kruskal`, reconstitui a ordem de exame (IM decrescente, empate pelo nome) e marca cada aresta como aceita se está na árvore. O `UniaoBusca` só acompanha os componentes para colorir o desenho e confere que cada rejeitada fecharia um ciclo.
-- Tema claro e escuro em `.streamlit/config.toml` (o modo segue o sistema e troca em ⋮ → Settings). Os desenhos do vis-network e do ECharts leem o modo ativo (`st.context.theme.type`) e ajustam fundo e texto; as cores de evasão/formatura são as mesmas nos dois modos.
+- Tema claro e escuro em `.streamlit/config.toml` (o modo segue o sistema e troca em ⋮ → Settings), com a identidade do relatório: títulos em Libertinus Serif (a Libertine do LaTeX), texto em Libertinus Sans e as cores das figuras, que `visual.py` importa de `figuras.py` (fonte única). Os desenhos leem o modo ativo (`st.context.theme.type`) e ajustam fundo e texto.
+- Modo apresentação (barra lateral): esconde os quadros "como ler", as notas e os detalhes e aumenta os grafos em 30%, para projetor e vídeo.
 - O networkx não é usado na interface; as posições do DAG e do Kruskal são calculadas à mão.
 
 Métodos auxiliares internos começam com `_` (ex.: `_bfs`).
