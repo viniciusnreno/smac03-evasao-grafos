@@ -33,7 +33,8 @@ src/
 ├── figuras.py               Figs. 3–5 em PDF → relatorio/figs/                          (Rafael)
 ├── main.py                  pipeline completo → outputs/                               (Carlos)
 ├── app.py                   interface gráfica (Streamlit), só a tela                    (Rafael)
-├── visual.py                grafos → vértices/arestas desenháveis e HTML (vis-network)  (Rafael)
+├── visual.py                grafos → desenho (vis-network) e opções clicáveis (ECharts)  (Rafael)
+├── explicacao.py            similaridade de Gower decomposta por atributo (painel do G1) (Rafael)
 └── passo_a_passo.py         passos do Edmonds–Karp e do Kruskal para a interface        (Rafael)
 outputs/                     resultados (json/csv) e figuras gerados pelo pipeline
 docs/                        esta documentação e os planos
@@ -219,20 +220,20 @@ A Fig. 2 (`fig:protocolo`) é gerada por `relatorio/figs/gerar_fig_protocolo.py`
 | `fatores.py` | `AnaliseFatores` | Lift treino × teste, replicação das direções e ranking de IM |
 | `figuras.py` | `GeradorFiguras` | Figuras do relatório em PDF |
 | `main.py` | `Pipeline` | Orquestra as classes e grava em `outputs/` |
-| `visual.py` | `MontadorVisual` | Converte grafos e destaques em desenho (vis-network) |
-| `passo_a_passo.py` | `DemoEdmondsKarp` e `DemoKruskal` | Passos dos algoritmos para as animações da interface |
+| `visual.py` | `MontadorVisual`, `GrafoECharts` | Converte grafos e destaques em desenho (vis-network) e em grafos clicáveis (ECharts) |
+| `explicacao.py` | `ExplicadorGower` | Decompõe a similaridade de Gower de uma aresta do G1 por atributo, com os pesos do treino; confere a soma com `GrafoSimilaridade.distancia` |
+| `passo_a_passo.py` | `DemoKruskal` | Passos do Kruskal para a animação da interface |
 | `app.py` | (funções de página) | Interface Streamlit; só tela, sem cálculo próprio |
 
 Os métodos de `Grafo`, `ModeloGrafo` e da fronteira do G1 estão fixados acima. Os demais métodos ficam a critério do dono do módulo.
 
 **Lógica separada da interface.** As classes devolvem dados; não imprimem, não plotam e não gravam arquivos fora da própria responsabilidade (só `GeradorFiguras` e `Pipeline` escrevem em disco). Assim, a interface gráfica reaproveita as mesmas classes sem mudar o núcleo.
 
-**Interface gráfica (`app.py`, bônus).** Streamlit com 8 páginas: visão geral (Tab. 3 e McNemar lidos de `outputs/`), G1 (ego-rede de um aluno de teste com o corte), Edmonds–Karp passo a passo, exploração de k e λ, G2 (árvore), Kruskal passo a passo, G3 (DAG com as trajetórias) e simulador de trajetória. Regras:
+**Interface gráfica (`app.py`, bônus).** Streamlit com 4 páginas: **Resumo** (dados, os três grafos, Tab. 3, McNemar e "o que mais pesa": pesos do G1, ablação e lifts), e uma página por grafo, cada uma com o desenho, o quadro "como ler" (vértice, aresta e codificação visual) e o simulador do grafo. **G1**: ego-rede clicável de um aluno de teste com o corte; o clique mostra por que dois alunos estão ligados. **G2**: árvore final e Kruskal passo a passo, alternados no mesmo lugar. **G3**: um só DAG com as trajetórias de risco e segura, o ponto de virada e o caminho montado no simulador; o seletor T0/T1/T2 esmaece as camadas ainda não observadas, limita o simulador a elas e mostra o risco e a previsão do G3 pela mesma regra do preditor (maior trecho com suporte, limiar = taxa do treino). Regras:
 
-- Os modelos são refeitos na tela com os hiperparâmetros de `outputs/hiperparametros.json`; um selo confere fluxo, número de arestas, peso da árvore e trajetórias com `resultados.json`. Métricas, IC e p-valores são sempre lidos de `outputs/`.
-- A página de exploração aceita outros k e λ, mas roda numa dobra de validação **do treino** (`Avaliador.particoes`). O teste não é tocado.
-- `DemoEdmondsKarp` sorteia (semente 42) 8 rotulados e 6 "sem rótulo", todos do treino, e usa o `ClassificadorCorteMinimo(contrair=False, registrar=True)`. O histórico de caminhos aumentantes vem do próprio `EdmondsKarp(registrar=True)`.
+- Os modelos são refeitos na tela com os hiperparâmetros de `outputs/hiperparametros.json`; fluxo, número de arestas, peso da árvore e trajetórias são conferidos com `resultados.json`, e um aviso só aparece se divergirem. Métricas, IC e p-valores são sempre lidos de `outputs/`.
 - `DemoKruskal` **não altera o Kruskal**: lê a árvore devolvida por `ArvoreDependencias.kruskal`, reconstitui a ordem de exame (IM decrescente, empate pelo nome) e marca cada aresta como aceita se está na árvore. O `UniaoBusca` só acompanha os componentes para colorir o desenho e confere que cada rejeitada fecharia um ciclo.
+- Tema claro e escuro em `.streamlit/config.toml` (o modo segue o sistema e troca em ⋮ → Settings). Os desenhos do vis-network e do ECharts leem o modo ativo (`st.context.theme.type`) e ajustam fundo e texto; as cores de evasão/formatura são as mesmas nos dois modos.
 - O networkx não é usado na interface; as posições do DAG e do Kruskal são calculadas à mão.
 
 Métodos auxiliares internos começam com `_` (ex.: `_bfs`).
