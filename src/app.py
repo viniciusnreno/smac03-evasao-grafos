@@ -7,30 +7,33 @@ Rodar a partir da raiz do repositório::
 
 Este módulo só cuida da tela: os grafos vêm das classes do projeto
 (``GrafoSimilaridade``, ``ArvoreDependencias``, ``DagTrajetorias``), o
-desenho vem de ``visual.MontadorVisual`` e as animações de
+desenho vem de ``visual`` e o Kruskal passo a passo de
 ``passo_a_passo``. Os números oficiais (métricas, IC, McNemar) são
 lidos de ``outputs/``; nada é digitado à mão.
 
-Sem vazamento: a visão oficial usa os hiperparâmetros gravados em
-``outputs/hiperparametros.json``. Só a página de exploração aceita
-outros k e λ, e ela roda numa dobra de validação **do treino**.
+Quatro páginas: resumo (avaliação e o que mais pesa) e uma por grafo,
+cada uma com o desenho, o quadro "como ler" e o simulador do grafo.
+Sem vazamento: os modelos usam os hiperparâmetros gravados em
+``outputs/hiperparametros.json``.
 """
 
 import json
 from pathlib import Path
 
+import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 from arvore_dependencias import DESFECHO, ArvoreDependencias
-from avaliacao import Avaliador
-from corte_minimo import FONTE, SUMIDOURO
+from dados import MOMENTOS as MOMENTOS_DADOS
 from dados import BaseDeDados
-from dag_trajetorias import INICIO, DagTrajetorias
+from dag_trajetorias import CAMADAS_POR_MOMENTO, INICIO, DagTrajetorias
+from explicacao import ExplicadorGower, grupo_do_atributo
+from figuras import CORES_GRUPO, NOMES_GRUPO, ROTULOS
 from grafo_similaridade import GrafoSimilaridade
-from passo_a_passo import DemoEdmondsKarp, DemoKruskal
-from visual import (COR_DESTAQUE, COR_EVASAO, COR_FORMATURA, COR_SEGURA,
+from passo_a_passo import DemoKruskal
+from visual import (COR_EVASAO, COR_SEGURA, GrafoECharts,
                     MontadorVisual)
 
 SAIDA = Path(__file__).resolve().parent.parent / "outputs"
@@ -49,6 +52,11 @@ NOME_METODO = {
     "classe_majoritaria": "Classe majoritária",
 }
 TOLERANCIA = 1e-4
+TOPO_ATRIBUTOS = 10          # atributos no painel "por que estão ligados"
+CAMADAS_SIMULADOR = {"L0": "Ingresso", "L1": "Financeiro",
+                     "L2": "Aprovação no S1", "L3": "Aprovação no S2"}
+ORDEM_GRUPOS = ("academico_s2", "academico_s1", "financeiro", "ingresso",
+                "demografico", "familia", "macro")
 
 
 # ----------------------------------------------------------------------
@@ -85,6 +93,11 @@ def modelo_g1(momento: str) -> tuple[GrafoSimilaridade, dict, dict]:
     return modelo, resultado, modelo.destaques()
 
 
+@st.cache_resource
+def explicador_g1(momento: str) -> ExplicadorGower:
+    return ExplicadorGower(modelo_g1(momento)[0], carregar_base())
+
+
 @st.cache_resource(show_spinner="Rodando o Kruskal...")
 def modelo_g2(momento: str) -> tuple[ArvoreDependencias, dict]:
     modelo = ArvoreDependencias(momento)
@@ -99,34 +112,10 @@ def modelo_g3(momento: str) -> tuple[DagTrajetorias, dict]:
     return modelo, modelo.executar()
 
 
-@st.cache_resource(show_spinner="Montando a rede de demonstração...")
-def demo_edmonds_karp(momento: str, k: int, lam: float) -> dict:
-    pesos = modelo_g1(momento)[0].pesos_
-    return DemoEdmondsKarp(momento, k=k, lam=lam).executar(
-        carregar_base(), pesos)
-
-
 @st.cache_resource
 def demo_kruskal(momento: str) -> dict:
     modelo, resultado = modelo_g2(momento)
     return DemoKruskal().executar(modelo, resultado["arestas"])
-
-
-@st.cache_resource
-def particoes_treino() -> list[tuple[list[int], list[int]]]:
-    return Avaliador().particoes(carregar_base())
-
-
-@st.cache_data(show_spinner="Rodando o corte mínimo na dobra de "
-                            "validação...")
-def explorar_g1(momento: str, k: int, lam: float, dobra: int) -> dict:
-    base = carregar_base()
-    treino, validacao = particoes_treino()[dobra]
-    modelo = GrafoSimilaridade(momento, k, lam=lam)
-    modelo.construir(base, treino, validacao)
-    prev = modelo.executar()["previsoes"]
-    return Avaliador.metricas(base.y(validacao),
-                              np.array([prev[i] for i in validacao]))
 
 
 @st.cache_data
@@ -153,9 +142,19 @@ def pct(x: float, casas: int = 0) -> str:
 # ----------------------------------------------------------------------
 # Componentes de tela
 # ----------------------------------------------------------------------
+def modo_escuro() -> bool:
+    """Modo ativo (claro/escuro), para os desenhos fora do tema."""
+    return st.context.theme.type == "dark"
+
+
+def montador() -> MontadorVisual:
+    return MontadorVisual(escuro=modo_escuro())
+
+
 def desenhar(desenho: tuple, altura: int = 560) -> None:
     vertices, arestas, opcoes = desenho
-    html = MontadorVisual(altura).html(vertices, arestas, opcoes)
+    html = MontadorVisual(altura, modo_escuro()).html(
+        vertices, arestas, opcoes)
     st.iframe(html, height=altura + 12)
 
 
@@ -165,23 +164,20 @@ def escolher_momento(chave: str, padrao: str = "T1") -> str:
         format_func=NOME_MOMENTO.get, key=chave)
 
 
-def selo(confere: bool, fonte: str) -> None:
-    """Confirma que o grafo refeito na tela bate com ``outputs/``."""
-    if confere:
-        st.caption(f":green[✔ confere com `outputs/{fonte}`]")
-    else:
-        st.warning(f"O resultado na tela difere de `outputs/{fonte}`. "
-                   "Rode `python src/main.py` de novo.")
+def como_ler(vertice: str, aresta: str, leitura: list[str]) -> None:
+    """Quadro fixo com o que são vértice e aresta e como ler o desenho."""
+    with st.container(border=True):
+        c1, c2 = st.columns([1, 1.5])
+        c1.markdown(f"**:material/circle: Vértice** · {vertice}\n\n"
+                    f"**:material/timeline: Aresta** · {aresta}")
+        c2.markdown("\n".join(f"- {t}" for t in leitura))
 
 
-def garantia(texto: str) -> None:
-    st.info(texto, icon=":material/verified:")
-
-
-def legenda(*itens: tuple[str, str]) -> None:
-    partes = [f"<span style='color:{cor}'>●</span> {texto}"
-              for cor, texto in itens]
-    st.markdown(" &nbsp; ".join(partes), unsafe_allow_html=True)
+def avisar_divergencia(confere: bool) -> None:
+    """Só aparece se o grafo refeito na tela diferir de ``outputs/``."""
+    if not confere:
+        st.warning("O resultado na tela difere de `outputs/`. Rode "
+                   "`python src/main.py` de novo.")
 
 
 def navegar_passos(chave: str, total: int) -> int:
@@ -208,26 +204,11 @@ def navegar_passos(chave: str, total: int) -> int:
     return st.session_state[chave]
 
 
-def nome_aluno(v) -> str:
-    return str(v)
-
-
-def formatar_caminho(caminho: list[tuple]) -> str:
-    if not caminho:
-        return "—"
-    return " → ".join([nome_aluno(caminho[0][0]),
-                       *(nome_aluno(v) for _, v in caminho)])
-
-
 # ----------------------------------------------------------------------
 # Páginas
 # ----------------------------------------------------------------------
-def pagina_visao_geral() -> None:
+def pagina_resumo() -> None:
     st.title("Evasão estudantil como grafos")
-    st.markdown(
-        "Quais características, em que combinação e em que momento "
-        "distinguem quem evade de quem se forma? Três grafos, aprendidos "
-        "com 80% dos alunos e avaliados uma única vez nos outros 20%.")
 
     dados = ler_json("resultados.json")["dados"]
     c = st.columns(4)
@@ -281,21 +262,186 @@ def pagina_visao_geral() -> None:
             format="%.2e")})
     st.caption("Fonte: `outputs/avaliacao_mcnemar.csv`.")
 
+    secao_fatores()
+
+
+def tabela_pesos() -> pd.DataFrame:
+    """Pesos do G1 por momento: IM com o desfecho (treino), soma 1."""
+    g1 = ler_json("resultados.json")["g1"]
+    linhas = [
+        {"momento": m, "atributo": a, "peso": p,
+         "rotulo": ROTULOS.get(a, a),
+         "grupo": NOMES_GRUPO[grupo_do_atributo(a)]}
+        for m in MOMENTOS for a, p in g1[m]["pesos"].items()
+    ]
+    return pd.DataFrame(linhas)
+
+
+def escala_grupos() -> alt.Scale:
+    return alt.Scale(domain=[NOMES_GRUPO[g] for g in ORDEM_GRUPOS],
+                     range=[CORES_GRUPO[g] for g in ORDEM_GRUPOS])
+
+
+def secao_fatores() -> None:
+    st.header("O que mais pesa", divider="gray")
+    momento = escolher_momento("momento_fatores")
+
+    pesos = tabela_pesos()
+    do_momento = pesos[pesos.momento == momento]
+    por_grupo = (do_momento.groupby("grupo").peso.sum()
+                 .sort_values(ascending=False))
+    ablacao = ler_csv("avaliacao_ablacao.csv")
+    ablacao = ablacao[ablacao.momento == momento].copy()
+    ablacao["nome"] = ablacao.grupo.map(NOMES_GRUPO)
+    ablacao["delta_pp"] = 100 * ablacao.delta
+    ablacao["ic_inf_pp"] = 100 * ablacao.ic_inf
+    ablacao["ic_sup_pp"] = 100 * ablacao.ic_sup
+    pior = ablacao.loc[ablacao.delta.idxmin()]
+    lift = ler_csv("fatores_lift.csv")
+    lift = lift[lift.grupo.isin(MOMENTOS_DADOS[momento])]
+    topo = lift.loc[lift.lift_treino.idxmax()]
+    taxa_base = ler_json("resultados.json")["dados"]["taxa_evasao"]
+
+    c = st.columns(3)
+    c[0].metric("Grupo de maior peso no grafo", por_grupo.index[0],
+                f"{pct(por_grupo.iloc[0])} do peso total",
+                delta_color="off", delta_arrow="off", border=True)
+    c[1].metric("Maior queda ao remover", pior.nome,
+                f"{br(pior.delta_pp, 1)} p.p. de acurácia",
+                delta_color="off", delta_arrow="off", border=True)
+    c[2].metric("Perfil de maior risco", topo.fator,
+                f"{pct(topo.taxa_treino)} evadem "
+                f"({br(topo.lift_treino, 1)}× a média)",
+                delta_color="off", delta_arrow="off", border=True)
+
+    # 1. Peso no grafo ------------------------------------------------
+    st.subheader("1 · Peso de cada atributo no grafo de similaridade")
+    st.caption(
+        "Na distância de Gower do G1, cada atributo entra com peso igual "
+        "à sua informação mútua com o desfecho, calculada só no treino e "
+        "normalizada para somar 100%. Atributo de peso maior aproxima "
+        "mais quem tem o mesmo valor nele.")
+    esq, dir_ = st.columns([1, 1.3])
+    with esq:
+        st.markdown("**Como o peso migra ao longo do curso**")
+        migracao = (pesos.groupby(["momento", "grupo"]).peso.sum()
+                    .reset_index())
+        grafico = alt.Chart(migracao).mark_bar().encode(
+            x=alt.X("peso:Q", stack="normalize", title="parcela do peso",
+                    axis=alt.Axis(format="%")),
+            y=alt.Y("momento:N", title=None, sort=list(MOMENTOS)),
+            color=alt.Color("grupo:N", scale=escala_grupos(),
+                            title=None,
+                            legend=alt.Legend(orient="bottom",
+                                              columns=3)),
+            order=alt.Order("peso:Q", sort="descending"),
+            tooltip=[alt.Tooltip("momento:N"), alt.Tooltip("grupo:N"),
+                     alt.Tooltip("peso:Q", format=".1%", title="peso")],
+        ).properties(height=260)
+        st.altair_chart(grafico, alt="Parcela do peso de cada grupo de "
+                        "atributos no G1 em T0, T1 e T2")
+    with dir_:
+        st.markdown(f"**Os 10 atributos de maior peso em {momento}**")
+        top10 = do_momento.nlargest(10, "peso")
+        grafico = alt.Chart(top10).mark_bar().encode(
+            x=alt.X("peso:Q", title="peso na distância",
+                    axis=alt.Axis(format="%")),
+            y=alt.Y("rotulo:N", sort="-x", title=None,
+                    axis=alt.Axis(labelOverlap=False, labelLimit=200)),
+            color=alt.Color("grupo:N", scale=escala_grupos(),
+                            legend=None),
+            tooltip=[alt.Tooltip("rotulo:N", title="atributo"),
+                     alt.Tooltip("grupo:N"),
+                     alt.Tooltip("peso:Q", format=".1%", title="peso")],
+        ).properties(height=320)
+        st.altair_chart(grafico, alt=f"Os 10 atributos de maior peso "
+                        f"no G1 em {momento}")
+    st.caption("Fonte: `outputs/resultados.json` (`g1.<momento>.pesos`).")
+
+    # 2. Ablação ------------------------------------------------------
+    st.subheader("2 · Quanto a acurácia cai sem cada grupo")
+    st.caption(
+        "Ablação na validação cruzada do treino: o corte mínimo é "
+        "refeito sem o grupo e comparado com o modelo completo. Barra "
+        "à esquerda do zero = o grupo faz falta. É **essencial** quando "
+        "o IC 95% inteiro fica abaixo de zero.")
+    ordem_ab = ablacao.sort_values("delta").nome.tolist()
+    base_ab = alt.Chart(ablacao).encode(
+        y=alt.Y("nome:N", sort=ordem_ab, title=None))
+    barras = base_ab.mark_bar().encode(
+        x=alt.X("delta_pp:Q",
+                title="variação da acurácia balanceada (p.p.)"),
+        color=alt.Color("classe:N", title=None,
+                        scale=alt.Scale(domain=["essencial", "neutro"],
+                                        range=[COR_EVASAO, "#9aa0a6"]),
+                        legend=alt.Legend(orient="bottom")),
+        tooltip=[alt.Tooltip("nome:N", title="grupo"),
+                 alt.Tooltip("num_atributos:Q", title="atributos"),
+                 alt.Tooltip("delta_pp:Q", format=".1f",
+                             title="Δ (p.p.)"),
+                 alt.Tooltip("ic_inf_pp:Q", format=".1f",
+                             title="IC inf."),
+                 alt.Tooltip("ic_sup_pp:Q", format=".1f",
+                             title="IC sup."),
+                 alt.Tooltip("classe:N")])
+    erros = base_ab.mark_rule().encode(x="ic_inf_pp:Q", x2="ic_sup_pp:Q")
+    zero = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(
+        strokeDash=[4, 3]).encode(x="x:Q")
+    st.altair_chart(
+        (barras + erros + zero).properties(
+            height=40 * len(ablacao) + 40),
+        alt=f"Variação da acurácia do corte mínimo sem cada grupo "
+            f"em {momento}, com IC 95%")
+    st.caption("Fonte: `outputs/avaliacao_ablacao.csv`.")
+
+    # 3. Perfis de risco ----------------------------------------------
+    st.subheader("3 · Perfis que mais elevam (ou reduzem) a evasão")
+    st.caption(
+        f"Lift = taxa de evasão do perfil ÷ taxa geral "
+        f"({pct(taxa_base, 1)}). Lift 2× = evadem o dobro da média. "
+        f"Calculado no treino; a última coluna repete a taxa no teste "
+        f"para mostrar que o padrão se mantém. Só aparecem perfis "
+        f"conhecidos em {momento}.")
+    lado = st.segmented_control(
+        "Mostrar", ["Risco", "Proteção"], default="Risco",
+        required=True, key="lado_fatores",
+        format_func={"Risco": "Elevam a evasão (lift > 1)",
+                     "Proteção": "Reduzem a evasão (lift < 1)"}.get)
+    if lado == "Risco":
+        perfis = lift[lift.lift_treino > 1].sort_values(
+            "lift_treino", ascending=False)
+    else:
+        perfis = lift[lift.lift_treino < 1].sort_values("lift_treino")
+    perfis = perfis.assign(grupo=perfis.grupo.map(NOMES_GRUPO))
+    st.dataframe(
+        perfis[["fator", "grupo", "n_treino", "taxa_treino",
+                "lift_treino", "taxa_teste"]],
+        hide_index=True, width="stretch",
+        alt=f"Perfis com lift de evasão em {momento}",
+        column_config={
+            "fator": st.column_config.TextColumn("perfil", width="large"),
+            "grupo": "grupo",
+            "n_treino": st.column_config.NumberColumn(
+                "alunos (treino)", format="localized"),
+            "taxa_treino": st.column_config.ProgressColumn(
+                "evasão (treino)", min_value=0, max_value=1,
+                format="percent"),
+            "lift_treino": st.column_config.NumberColumn(
+                "lift", format="%.2f×"),
+            "taxa_teste": st.column_config.NumberColumn(
+                "evasão (teste)", format="percent"),
+        })
+    st.caption("Fonte: `outputs/fatores_lift.csv`.")
+
 
 def pagina_g1() -> None:
     st.title("G1 · Similaridade e corte mínimo")
-    st.markdown(
-        "Cada aluno é ligado aos k mais parecidos pela distância de "
-        "Gower; a capacidade da aresta é 1 − d. A fonte S liga-se aos "
-        "evadidos do treino e o sumidouro T aos formados. O **corte "
-        "mínimo** (Edmonds–Karp) separa os dois lados: cada aluno de "
-        "teste é previsto pelo lado em que cai.")
     momento = escolher_momento("g1_momento")
     modelo, resultado, destaques = modelo_g1(momento)
     oficial = ler_json("resultados.json")["g1"][momento]
-    selo(abs(resultado["fluxo"] - oficial["fluxo"]) < TOLERANCIA
-         and resultado["num_arestas"] == oficial["num_arestas"],
-         "resultados.json")
+    avisar_divergencia(
+        abs(resultado["fluxo"] - oficial["fluxo"]) < TOLERANCIA
+        and resultado["num_arestas"] == oficial["num_arestas"])
 
     base = carregar_base()
     teste = oficial["teste"]
@@ -311,6 +457,21 @@ def pagina_g1() -> None:
                 "(teste de permutação, k = 10)")
 
     st.subheader("Vizinhança de um aluno de teste")
+    como_ler(
+        f"um aluno. O grafo tem {br(resultado['num_vertices'], 0)}; aqui "
+        "aparecem o aluno escolhido e os vizinhos dele.",
+        f"liga cada aluno aos k = {modelo.k} mais parecidos pela "
+        "distância de Gower (kNN simétrico).",
+        ["**Espessura** = similaridade 1 − d, que é a capacidade da "
+         "aresta no corte mínimo.",
+         "**Círculo** = treino (rótulo conhecido). **Losango** = teste: "
+         "cor = previsão, borda = desfecho real.",
+         "**Vermelho** = evasão, **azul** = formatura. **Tracejado "
+         "vermelho** = aresta cortada pelo corte mínimo.",
+         "**Clique** num vizinho ou numa aresta para ver *por que* os "
+         "dois alunos estão ligados. Passe o mouse para destacar os "
+         "vizinhos de um vértice."])
+
     previsoes = resultado["previsoes"]
     idx_teste = modelo.idx_sem_rotulo_
     real = dict(zip(idx_teste, map(bool, base.y(idx_teste))))
@@ -322,10 +483,13 @@ def pagina_g1() -> None:
         "Falso positivo": lambda i: previsoes[i] and not real[i],
         "Falso negativo": lambda i: not previsoes[i] and real[i],
     }
-    c1, c2 = st.columns([2, 1])
-    categoria = c1.radio("Filtrar", list(categorias), horizontal=True)
+    c1, c2 = st.columns([2, 1], vertical_alignment="bottom")
+    categoria = c1.segmented_control(
+        "Filtrar", list(categorias), default="Todos", required=True,
+        key="g1_filtro")
     candidatos = [i for i in idx_teste if categorias[categoria](i)]
-    aluno = c2.selectbox(f"Aluno ({len(candidatos)})", candidatos)
+    aluno = c2.selectbox(f"Aluno ({len(candidatos)})", candidatos,
+                         key="g1_aluno")
     if aluno is None:
         st.info("Nenhum aluno nesta categoria.")
         return
@@ -334,12 +498,8 @@ def pagina_g1() -> None:
     vizinhos = modelo.grafo.vizinhos(aluno)
     linhas = []
     for v, cap in sorted(vizinhos.items(), key=lambda x: -x[1]):
-        if v in modelo.rotulos_:
-            papel = "treino: " + ("evadiu" if modelo.rotulos_[v]
-                                  else "formou")
-        else:
-            papel = "teste (sem rótulo)"
-        linhas.append({"aluno": v, "papel": papel,
+        linhas.append({"aluno": v, "papel": papel_aluno(
+                           v, modelo.rotulos_, previsoes, real),
                        "lado do corte": "S (evasão)" if v in lado_evasao
                        else "T (formatura)",
                        "distância de Gower": 1 - cap,
@@ -348,30 +508,44 @@ def pagina_g1() -> None:
     para_s = tabela.loc[tabela["lado do corte"].str.startswith("S"),
                         "capacidade"].sum()
     para_t = tabela.capacidade.sum() - para_s
+    acertou = previsoes[aluno] == real[aluno]
 
-    col_g, col_i = st.columns([3, 1.3])
+    c = st.columns(5)
+    c[0].metric("Previsão", "evasão" if previsoes[aluno] else "formatura",
+                border=True)
+    c[1].metric("Desfecho real", "evasão" if real[aluno] else "formatura",
+                "acertou" if acertou else "errou",
+                delta_color="normal" if acertou else "inverse",
+                delta_arrow="off", border=True)
+    c[2].metric("Vizinhos no kNN", len(vizinhos), border=True)
+    c[3].metric("Capacidade → lado S", br(para_s, 2), border=True,
+                help="Soma das capacidades das arestas até vizinhos que "
+                "ficaram do lado da evasão.")
+    c[4].metric("Capacidade → lado T", br(para_t, 2), border=True,
+                help="Soma das capacidades das arestas até vizinhos que "
+                "ficaram do lado da formatura.")
+
+    opcao, ordem, pares = GrafoECharts(modo_escuro()).ego_g1(
+        modelo.grafo, aluno, modelo.rotulos_, previsoes, lado_evasao, real)
+    col_g, col_i = st.columns([1.35, 1])
     with col_g:
-        desenhar(MontadorVisual().ego_g1(
-            modelo.grafo, aluno, modelo.rotulos_, previsoes,
-            lado_evasao, real), altura=520)
-        legenda((COR_EVASAO, "treino evadiu"),
-                (COR_FORMATURA, "treino formou"),
-                ("#8a96a3", "◆ teste: cor = previsão, borda = real"),
-                (COR_EVASAO, "- - - aresta cortada"))
+        evento = st.echarts_chart(
+            opcao, on_select="rerun", key=f"ego_{momento}_{aluno}",
+            height=560, alt=f"Aluno {aluno} e seus {len(vizinhos)} "
+            "vizinhos no grafo kNN de Gower")
+    par = par_selecionado(evento, ordem, pares, aluno)
+    explicador = explicador_g1(momento)
     with col_i:
-        st.metric("Previsão", "evasão" if previsoes[aluno]
-                  else "formatura")
-        st.metric("Desfecho real", "evasão" if real[aluno]
-                  else "formatura",
-                  delta="acertou" if previsoes[aluno] == real[aluno]
-                  else "errou",
-                  delta_color="normal" if previsoes[aluno] == real[aluno]
-                  else "inverse")
-        st.metric("Vizinhos no kNN", len(vizinhos))
-        st.metric("Capacidade para o lado S", br(para_s, 2))
-        st.metric("Capacidade para o lado T", br(para_t, 2))
-    with st.expander("Vizinhos do aluno"):
+        if par is None:
+            painel_aluno(explicador, aluno, papel_aluno(
+                aluno, modelo.rotulos_, previsoes, real))
+        else:
+            painel_aresta(explicador, *par, modelo.rotulos_, previsoes,
+                          real)
+
+    with st.expander("Todos os vizinhos do aluno"):
         st.dataframe(tabela, hide_index=True, width="stretch",
+                     alt=f"Vizinhos do aluno {aluno} no kNN",
                      column_config={
                          "distância de Gower":
                              st.column_config.NumberColumn(format="%.3f"),
@@ -386,142 +560,126 @@ def pagina_g1() -> None:
         "uma vez pelo pipeline.")
 
 
-def pagina_exploracao() -> None:
-    st.title("G1 · Exploração de k e λ")
-    st.warning(
-        "Exploração **só no treino**: o grafo usa 4 dobras do treino e "
-        "classifica a 5ª (validação). O teste não é tocado. Estes "
-        "números não são os resultados oficiais.",
-        icon=":material/science:")
-    momento = escolher_momento("exp_momento")
-    k_oficial, lam_oficial = hiperparametros_g1(momento)
-    c1, c2, c3 = st.columns(3)
-    k = c1.slider("k (vizinhos)", 5, 60, k_oficial, step=5)
-    lam = c2.slider("λ (viés para a evasão)", 0.0, 2.0, lam_oficial,
-                    step=0.25)
-    dobra = c3.selectbox("Dobra de validação", range(5),
-                         format_func=lambda d: f"{d + 1} de 5")
-    m = explorar_g1(momento, k, lam, dobra)
-
-    c = st.columns(4)
-    c[0].metric("Acurácia balanceada", br(m['acuracia_balanceada'], 3))
-    c[1].metric("Recall da evasão", br(m['recall_evasao'], 3))
-    c[2].metric("Especificidade", br(m['especificidade'], 3))
-    c[3].metric("VP / FP / FN / VN",
-                f"{m['vp']} / {m['fp']} / {m['fn']} / {m['vn']}")
-
-    historico = st.session_state.setdefault("exp_historico", {})
-    historico[(momento, k, lam, dobra)] = m["acuracia_balanceada"]
-    tabela = pd.DataFrame(
-        [{"momento": a, "k": b, "λ": c_, "dobra": d + 1,
-          "acurácia balanceada": v}
-         for (a, b, c_, d), v in historico.items()])
-    cv = ler_csv("avaliacao_cv.csv")
-    ref = cv[(cv.momento == momento) & (cv.metodo == "corte_minimo")]
-    if not ref.empty:
-        st.caption(
-            f"Referência oficial (CV de 5 dobras com k = {k_oficial}, "
-            f"λ = {lam_oficial}): {br(ref.media.iloc[0], 3)} ± "
-            f"{br(ref.dp.iloc[0], 3)}. Fonte: `outputs/avaliacao_cv.csv`.")
-    st.subheader("Configurações testadas nesta sessão")
-    st.dataframe(tabela.sort_values(["momento", "dobra", "λ", "k"]),
-                 hide_index=True, width="stretch",
-                 column_config={"acurácia balanceada":
-                                st.column_config.ProgressColumn(
-                                    format="%.3f", min_value=0.5,
-                                    max_value=1.0)})
+def papel_aluno(v: int, rotulos: dict, previsoes: dict,
+                real: dict) -> str:
+    if v in rotulos:
+        return "treino: " + ("evadiu" if rotulos[v] else "formou")
+    texto = "teste: previsto " + ("evasão" if previsoes[v]
+                                  else "formatura")
+    return texto + " (real: " + ("evasão" if real[v]
+                                 else "formatura") + ")"
 
 
-def pagina_edmonds_karp() -> None:
-    st.title("Edmonds–Karp passo a passo")
-    st.markdown(
-        "Uma rede pequena com alunos **do treino** (sorteio com semente "
-        "42): os rotulados ficam ligados a S (evadiu) ou a T (formou) "
-        "com capacidade ∞, e os alunos “sem rótulo” recebem o viés "
-        "λ·(1 − q) de S e λ·q para T. A cada passo, a **BFS** acha o "
-        "caminho aumentante mais curto e empurra o gargalo.")
-    c1, c2, c3 = st.columns([2, 1, 1])
-    with c1:
-        momento = escolher_momento("ek_momento")
-    k = c2.segmented_control("k", [2, 3, 4], default=3, required=True,
-                             key="ek_k")
-    lam = c3.segmented_control("λ", [0.0, 1.0], default=1.0,
-                               required=True, key="ek_lam")
-    demo = demo_edmonds_karp(momento, k, lam)
-    passos = demo["passos"]
-    n = len(passos) - 1
-    i = navegar_passos(f"ek_passo_{momento}_{k}_{lam}", n + 2)
+def par_selecionado(evento, ordem: list[int],
+                    pares: list[tuple[int, int]],
+                    aluno: int) -> tuple[int, int] | None:
+    """Par (u, v) clicado: um vizinho vale a aresta até o aluno central."""
+    for grupo in evento.selection.selected:
+        indices = grupo.get("data_indices") or []
+        if not indices:
+            continue
+        if grupo.get("data_type") == "edge":
+            return pares[indices[0]]
+        if grupo.get("data_type") == "node":
+            v = ordem[indices[0]]
+            return None if v == aluno else (aluno, v)
+    return None
 
-    final = i == n + 1
-    passo = passos[min(i, n)]
-    c = st.columns(4)
-    if i == 0:
-        c[0].metric("Passo", "rede inicial")
-    elif final:
-        c[0].metric("Passo", "corte mínimo")
-    else:
-        c[0].metric("Passo", f"caminho {i} de {n}")
-    c[1].metric("Gargalo", "—" if i == 0 or final
-                else br(passo['gargalo'], 3))
-    c[2].metric("Fluxo acumulado", br(passo['fluxo'], 3))
-    c[3].metric("Capacidade do corte", br(demo['capacidade_corte'], 3)
-                if final else "—")
-    if 0 < i <= n:
-        st.markdown(f"**Caminho aumentante (BFS):** "
-                    f"`{formatar_caminho(passo['caminho'])}`")
-    elif i == 0:
-        st.markdown("Os arcos com fluxo mostram **fluxo / "
-                    "capacidade**; passe o mouse num arco para ver a "
-                    "capacidade. Avance para ver o primeiro caminho.")
-    else:
-        st.markdown(
-            "Não há mais caminho de S a T na rede residual. Uma BFS a "
-            "partir de S marca quem ainda é alcançável: esse é o **lado "
-            "da evasão**. As arestas tracejadas formam o corte mínimo.")
 
-    desenhar(MontadorVisual().rede_fluxo(
-        demo["rede"], FONTE, SUMIDOURO, passo["residual"],
-        demo["rotulos"],
-        caminho=passo["caminho"] if 0 < i <= n else (),
-        lado_s=demo["lado_s"] if final else None), altura=600)
-    legenda((COR_EVASAO, "evadiu (treino)"),
-            (COR_FORMATURA, "formou (treino)"),
-            ("#bbbbbb", "○ sem rótulo"),
-            (COR_DESTAQUE, "caminho da vez"),
-            ("#4a5560", "arco com fluxo"))
+def painel_aluno(explicador: ExplicadorGower, aluno: int,
+                 papel: str) -> None:
+    st.markdown(f"#### Aluno {aluno}")
+    st.caption(papel)
+    st.markdown("**Atributos de maior peso no grafo**")
+    st.dataframe(
+        explicador.perfil(aluno), hide_index=True, width="stretch",
+        alt=f"Atributos de maior peso do aluno {aluno}",
+        column_config={
+            "atributo": "atributo", "valor": "valor do aluno",
+            "peso": st.column_config.ProgressColumn(
+                "peso na distância", min_value=0,
+                max_value=max(explicador.pesos.values()),
+                format="percent")})
+    st.info("Clique num vizinho ou numa aresta do desenho para ver por "
+            "que os dois alunos estão ligados.",
+            icon=":material/touch_app:")
 
-    if final:
-        st.subheader("Resultado")
-        tabela = pd.DataFrame([
-            {"aluno": v,
-             "previsão": "evasão" if demo["previsoes"][v]
-             else "formatura",
-             "real": "evasão" if demo["real"][v] else "formatura"}
-            for v in demo["sem_rotulo"]])
-        tabela["acertou"] = np.where(
-            tabela["previsão"] == tabela["real"], "✔", "✘")
-        st.dataframe(tabela, hide_index=True, width="stretch")
-    garantia(
-        "**Garantia (Edmonds–Karp, aula 6):** fluxo máximo em O(V·E²), "
-        "porque cada caminho aumentante é o mais curto (BFS). Pelo "
-        "teorema do fluxo máximo e corte mínimo, o valor final do fluxo "
-        "é igual à capacidade do corte. Ao final, o fluxo é "
-        f"{br(demo['fluxo'], 3)} e o corte, "
-        f"{br(demo['capacidade_corte'], 3)}.")
+
+def painel_aresta(explicador: ExplicadorGower, u: int, v: int,
+                  rotulos: dict, previsoes: dict, real: dict) -> None:
+    tabela = explicador.contribuicoes(u, v)
+    similaridade = float(tabela.semelhanca.sum())
+    st.markdown(f"#### Por que os alunos {u} e {v} estão ligados")
+    st.caption(f"{u} · {papel_aluno(u, rotulos, previsoes, real)}  \n"
+               f"{v} · {papel_aluno(v, rotulos, previsoes, real)}")
+    st.metric("Similaridade 1 − d (capacidade da aresta)",
+              br(similaridade, 3), border=True)
+
+    topo = tabela.head(TOPO_ATRIBUTOS)
+    partes = topo.melt(
+        id_vars=["rotulo", "peso", "valor_i", "valor_j"],
+        value_vars=["semelhanca", "distancia"], var_name="parte",
+        value_name="valor")
+    partes["parte"] = partes.parte.map(
+        {"semelhanca": "em comum", "distancia": "diferença"})
+    grafico = alt.Chart(partes).mark_bar().encode(
+        x=alt.X("valor:Q", stack="zero", title="peso na distância",
+                axis=alt.Axis(format="%")),
+        y=alt.Y("rotulo:N", title=None,
+                sort=alt.EncodingSortField("peso", order="descending")),
+        color=alt.Color("parte:N", title=None,
+                        scale=alt.Scale(domain=["em comum", "diferença"],
+                                        range=[COR_SEGURA, "#d5dbe1"]),
+                        legend=alt.Legend(orient="bottom")),
+        order=alt.Order("parte:N", sort="descending"),
+        tooltip=[alt.Tooltip("rotulo:N", title="atributo"),
+                 alt.Tooltip("valor_i:N", title=f"aluno {u}"),
+                 alt.Tooltip("valor_j:N", title=f"aluno {v}"),
+                 alt.Tooltip("parte:N"),
+                 alt.Tooltip("valor:Q", format=".1%")],
+    ).properties(height=28 * len(topo) + 30)
+    st.altair_chart(grafico, alt=f"Contribuição de cada atributo para a "
+                    f"similaridade entre os alunos {u} e {v}")
+    resto = float(tabela.semelhanca.iloc[TOPO_ATRIBUTOS:].sum())
+    st.caption(
+        "Barra inteira = peso do atributo. Parte verde = quanto desse "
+        "peso os dois ganharam por serem parecidos nele. A soma das "
+        "partes verdes de todos os atributos é a similaridade "
+        f"({br(similaridade, 3)}); os demais "
+        f"{len(tabela) - len(topo)} atributos somam {br(resto, 3)}.")
+    with st.expander("Valores dos dois alunos"):
+        st.dataframe(
+            topo[["rotulo", "valor_i", "valor_j", "peso", "semelhanca"]],
+            hide_index=True, width="stretch",
+            alt=f"Valores dos alunos {u} e {v} nos atributos de maior peso",
+            column_config={
+                "rotulo": "atributo",
+                "valor_i": f"aluno {u}", "valor_j": f"aluno {v}",
+                "peso": st.column_config.NumberColumn(
+                    "peso", format="percent"),
+                "semelhanca": st.column_config.NumberColumn(
+                    "em comum", format="percent")})
 
 
 def pagina_g2() -> None:
     st.title("G2 · Árvore de dependências")
-    st.markdown(
-        "Cada atributo é um vértice, mais o **Desfecho**. O peso de cada "
-        "par é a informação mútua (bits, no treino). O **Kruskal** liga "
-        "todos os vértices sem ciclos com a maior informação total; os "
-        "vizinhos do Desfecho são os fatores com informação própria.")
-    momento = escolher_momento("g2_momento")
+    c1, c2 = st.columns(2, vertical_alignment="bottom")
+    with c1:
+        momento = escolher_momento("g2_momento")
+    visao = c2.segmented_control(
+        "Mostrar", ["Árvore final", "Kruskal passo a passo"],
+        default="Árvore final", required=True, key="g2_visao")
+    if visao == "Árvore final":
+        arvore_final(momento)
+    else:
+        kruskal_passo_a_passo(momento)
+
+
+def arvore_final(momento: str) -> None:
     modelo, resultado = modelo_g2(momento)
     oficial = ler_json("resultados.json")["g2"][momento]
-    selo(abs(resultado["peso_total"] - oficial["peso_total"]) < TOLERANCIA,
-         "resultados.json")
+    avisar_divergencia(
+        abs(resultado["peso_total"] - oficial["peso_total"]) < TOLERANCIA)
 
     csv = ler_csv(f"g2_arvore_{momento}.csv")
     estabilidade = {tuple(sorted((r.u, r.v))): r.estabilidade
@@ -535,16 +693,27 @@ def pagina_g2() -> None:
     c[3].metric("Sobreposição treino × teste",
                 pct(oficial['sobreposicao_treino_teste'], 0))
 
+    como_ler(
+        "um atributo do aluno; o **Desfecho** (evadiu ou não) é o "
+        "vértice vermelho.",
+        "dependência entre dois atributos, mantida pelo Kruskal na "
+        "árvore geradora de peso máximo (peso = informação mútua).",
+        ["**Espessura** = informação mútua (bits): quanto saber um "
+         "atributo diz sobre o outro.",
+         "**Número na aresta** = informação mútua com o Desfecho.",
+         "**Laranja** = vizinho direto do Desfecho: o que mais informa "
+         "sobre a evasão naquele momento.",
+         "**Opacidade** = estabilidade: % de 100 bootstraps em que a "
+         "aresta reaparece. Arraste os vértices para reorganizar."])
     col_g, col_t = st.columns([3, 1.2])
     with col_g:
-        desenhar(MontadorVisual().arvore_g2(
+        desenhar(montador().arvore_g2(
             resultado["arestas"], modelo.grafo.vertices(), DESFECHO,
             estabilidade), altura=620)
-        st.caption("Espessura = informação mútua; opacidade = "
-                   "estabilidade no bootstrap. Arraste os vértices.")
     with col_t:
         st.markdown("**Vizinhos do Desfecho**")
         viz = pd.DataFrame(oficial["vizinhos_desfecho"])
+        viz["atributo"] = viz.atributo.map(lambda a: ROTULOS.get(a, a))
         st.dataframe(viz.rename(columns={"im_bits": "IM (bits)"}),
                      hide_index=True, width="stretch",
                      column_config={"estabilidade":
@@ -552,20 +721,9 @@ def pagina_g2() -> None:
                                         format="percent")})
     with st.expander("Todas as arestas da árvore"):
         st.dataframe(csv, hide_index=True, width="stretch")
-    garantia("**Garantia (Kruskal, aula 5):** árvore geradora de peso "
-             "máximo em O(E log E). Liga todos os vértices, não tem "
-             "ciclos e nenhuma outra árvore tem soma de IM maior. "
-             "Não é caminho mínimo nem causalidade.")
 
 
-def pagina_kruskal() -> None:
-    st.title("Kruskal passo a passo")
-    st.markdown(
-        "As arestas do grafo completo de informação mútua são examinadas "
-        "em ordem decrescente. O **union-find** diz se as pontas já estão "
-        "no mesmo componente: se estão, a aresta fecharia um ciclo e é "
-        "rejeitada. Cada cor é um componente.")
-    momento = escolher_momento("kr_momento")
+def kruskal_passo_a_passo(momento: str) -> None:
     demo = demo_kruskal(momento)
     so_aceitas = st.toggle("Pular as rejeitadas", value=False)
     indices = [j for j, p in enumerate(demo["passos"])
@@ -584,111 +742,133 @@ def pagina_kruskal() -> None:
                 if passo["peso"] >= 1e-4 else "< 0,0001")
     c[2].metric("Arestas na árvore", f"{passo['num_aceitas']} de {total}")
     c[3].metric("Componentes", len(set(passo["componentes"].values())))
+    u, v = (ROTULOS.get(x, x) for x in (passo["u"], passo["v"]))
     if passo["aceita"]:
-        st.success(f"**Aceita:** {passo['u']} — {passo['v']} une dois "
-                   "componentes.")
+        st.success(f"**Aceita:** {u} — {v} une dois componentes.")
     else:
-        st.error(f"**Rejeitada:** {passo['u']} e {passo['v']} já estão "
-                 "no mesmo componente; a aresta fecharia um ciclo.")
+        st.error(f"**Rejeitada:** {u} e {v} já estão no mesmo "
+                 "componente; a aresta fecharia um ciclo.")
 
     aceitas = [(p["u"], p["v"], p["peso"])
                for p in demo["passos"][:j] if p["aceita"]]
-    desenhar(MontadorVisual().passo_kruskal(
+    como_ler(
+        "um atributo, em círculo fixo, com o Desfecho no centro.",
+        "par de atributos candidato, examinado em ordem decrescente de "
+        "informação mútua.",
+        ["**Verde** = aresta aceita na vez (une dois componentes).",
+         "**Vermelho** = aresta rejeitada: fecharia um ciclo.",
+         "**Cinza-escuro** = árvore montada até aqui.",
+         "**Cor do vértice** = componente do union-find; cores iguais "
+         "= já estão conectados."])
+    desenhar(montador().passo_kruskal(
         demo["vertices"], DESFECHO, aceitas,
         (passo["u"], passo["v"], passo["peso"], passo["aceita"]),
         passo["componentes"]), altura=700)
-    legenda((COR_SEGURA, "aresta aceita na vez"),
-            (COR_EVASAO, "aresta rejeitada (ciclo)"),
-            ("#4a5560", "árvore até aqui"))
-    garantia("**Garantia (Kruskal, aula 5):** ao fim, as "
-             f"{total} arestas aceitas formam uma árvore geradora de peso "
-             "máximo. As decisões vêm da saída do `kruskal()` do projeto; "
-             "a demonstração só reconstitui a ordem.")
 
 
 def pagina_g3() -> None:
     st.title("G3 · DAG de trajetórias")
-    st.markdown(
-        "Camadas: **ingresso** (bolsa e idade) → **financeiro** "
-        "(mensalidade e dívida) → **aprovação no S1** → **aprovação no "
-        "S2** → **desfecho**. O peso do arco é o número de alunos do "
-        "treino que passam por ele. **Kahn** dá a ordem topológica (o "
-        "número antes de cada estado) e o **Bellman-Ford**, com peso "
-        "−ln(taxa), acha a trajetória de maior risco.")
-    modelo, resultado = modelo_g3("T2")
-    oficial = ler_json("resultados.json")["g3"]["T2"]
-    selo(resultado["trajetoria_risco"] == oficial["trajetoria_risco"]
-         and resultado["trajetoria_segura"] == oficial["trajetoria_segura"],
-         "resultados.json")
-
-    c1, c2, c3 = st.columns(3)
-    ver_risco = c1.toggle("Trajetória de maior risco", value=True)
-    ver_segura = c2.toggle("Trajetória mais segura", value=True)
-    ver_virada = c3.toggle("Ponto de virada", value=True)
-
+    momento = escolher_momento("g3_momento", padrao="T2")
+    conhecidas = CAMADAS_POR_MOMENTO[momento]
+    modelo, resultado = modelo_g3(momento)
+    oficial = ler_json("resultados.json")["g3"][momento]
+    avisar_divergencia(
+        resultado["trajetoria_risco"] == oficial["trajetoria_risco"]
+        and resultado["trajetoria_segura"] == oficial["trajetoria_segura"])
     risco = resultado["trajetoria_risco"]
     segura = resultado["trajetoria_segura"]
     virada = resultado["ponto_de_virada"]
-    desenhar(MontadorVisual().dag_g3(
+    vistas = list(CAMADAS_SIMULADOR.values())[:conhecidas]
+
+    teste = oficial["teste"]
+    c = st.columns(4)
+    c[0].metric("Camadas observadas",
+                f"{conhecidas} de {len(CAMADAS_SIMULADOR)}",
+                help=f"{', '.join(vistas)}. O DAG é o mesmo nos três "
+                "momentos; muda quanto do caminho do aluno já se conhece "
+                "para prever.")
+    c[1].metric("Acurácia balanceada", br(teste["acuracia_balanceada"], 3))
+    c[2].metric("Recall da evasão", br(teste["recall_evasao"], 3))
+    c[3].metric("Especificidade", br(teste["especificidade"], 3))
+
+    c = st.columns(4)
+    ver_risco = c[0].toggle("Trajetória de maior risco", value=True)
+    ver_segura = c[1].toggle("Trajetória mais segura", value=True)
+    ver_virada = c[2].toggle("Ponto de virada", value=True)
+    ver_simulado = c[3].toggle("Caminho simulado", value=True)
+
+    st.markdown(f"**Simule um aluno em {momento}:** escolha um estado em "
+                "cada camada já observada.")
+    caminho, linhas = simular_caminho(modelo, conhecidas)
+
+    leitura = [
+        "**Tamanho** = nº de alunos no estado. **Cor** = taxa de "
+        "evasão: azul = formam, vermelho = evadem.",
+        "**Número antes do nome** = posição na ordem topológica de "
+        "Kahn.",
+        "**Vermelho/verde** = trajetória de maior risco/mais segura "
+        "(Bellman-Ford). **Laranja** = caminho simulado. O número na "
+        "aresta é o nº de alunos.",
+        "**Tracejado** = ponto de virada. Arestas **claras** = abaixo "
+        "do suporte mínimo."]
+    if conhecidas < len(CAMADAS_SIMULADOR):
+        leitura.append(f"**Esmaecido** = camadas que ainda não se "
+                       f"conhecem em {momento}; o preditor não as usa.")
+    como_ler(
+        "um estado da trajetória (ex.: \"S1: aprovou < 50%\"), em "
+        "camadas: ingresso → financeiro → S1 → S2 → desfecho.",
+        "alunos de treino que passam de um estado ao seguinte; só "
+        "vai da esquerda para a direita, por isso não há ciclo.",
+        leitura)
+    desenhar(montador().dag_g3(
         modelo.grafo, resultado["ordem_topologica"],
         modelo.contagem_vertice_, modelo.evasoes_vertice_,
         modelo.min_suporte,
         risco=risco["caminho"] if ver_risco else None,
         segura=segura["caminho"] if ver_segura else None,
-        virada=virada["arco"] if ver_virada else None), altura=640)
-    legenda((COR_EVASAO, "maior risco"), (COR_SEGURA, "mais segura"),
-            ("#8a96a3", "cor do estado: azul = forma, vermelho = evade"),
-            ("#8a96a3", "- - - ponto de virada"))
+        virada=virada["arco"] if ver_virada else None,
+        caminho_usuario=caminho if ver_simulado else None,
+        conhecidas=conhecidas), altura=640)
 
+    resultado_simulacao(modelo, linhas, resultado["limiar"], momento)
     c = st.columns(3)
     c[0].metric("Trajetória de maior risco",
-                f"{risco['evasoes']} de {risco['n']} evadiram")
+                f"{risco['evasoes']} de {risco['n']} evadiram",
+                border=True)
     c[1].metric("Trajetória mais segura",
-                f"{segura['evasoes']} de {segura['n']} evadiram")
+                f"{segura['evasoes']} de {segura['n']} evadiram",
+                border=True)
     c[2].metric("Ponto de virada",
                 f"{pct(virada['taxa_antes'])} → "
-                f"{pct(virada['taxa_depois'])}",
+                f"{pct(virada['taxa_depois'])}", border=True,
                 help=f"{virada['arco'][0]} → {virada['arco'][1]} "
                 f"({virada['n']} alunos)")
-    st.markdown(
-        f"- **Risco:** {' → '.join(risco['caminho'])}\n"
-        f"- **Segura:** {' → '.join(segura['caminho'])}\n"
-        f"- **Virada:** {virada['arco'][0]} → {virada['arco'][1]}")
-
-    teste = ler_csv("avaliacao_teste.csv")
-    dag = teste[teste.metodo == "caminho_dag"].set_index("momento")
-    st.caption(
-        "Como preditor (acurácia balanceada no teste): "
-        + "; ".join(
-            f"{NOME_MOMENTO[m]} {br(dag.loc[m].acuracia_balanceada)}"
-            for m in MOMENTOS if m in dag.index)
-        + ". Fonte: `outputs/avaliacao_teste.csv`.")
-    with st.expander("Ordem topológica de Kahn"):
-        st.write(" → ".join(resultado["ordem_topologica"]))
-    garantia("**Garantias:** Kahn (aula 3) devolve uma ordem topológica "
-             "e prova que o grafo não tem ciclos. Bellman-Ford (aula 4) "
-             "acha o caminho mínimo da origem a cada estado; com peso "
-             "−ln(taxa), o caminho mínimo é o de maior produto das taxas "
-             "de evasão (só arcos com pelo menos "
-             f"{modelo.min_suporte} alunos).")
+    st.caption("As trajetórias e o ponto de virada usam o caminho "
+               "completo e são iguais nos três momentos. Fonte das "
+               "métricas: `outputs/resultados.json`.")
+    with st.expander("Trajetórias e ordem topológica de Kahn"):
+        st.markdown(
+            f"- **Risco:** {' → '.join(risco['caminho'])}\n"
+            f"- **Segura:** {' → '.join(segura['caminho'])}\n"
+            f"- **Virada:** {virada['arco'][0]} → {virada['arco'][1]}\n"
+            f"- **Ordem de Kahn:** "
+            f"{' → '.join(resultado['ordem_topologica'])}")
 
 
-def pagina_simulador() -> None:
-    st.title("G3 · Simulador de trajetória")
-    st.markdown(
-        "Monte o caminho de um aluno camada por camada. Em cada passo "
-        "aparecem os estados alcançáveis no DAG e a taxa de evasão, no "
-        "treino, de quem fez exatamente esse caminho até ali.")
-    modelo, resultado = modelo_g3("T2")
+def simular_caminho(modelo: DagTrajetorias,
+                    conhecidas: int) -> tuple[list[str], list]:
+    """Seletores das camadas observadas; devolve o caminho e o resumo."""
     estados = estados_treino()
-    nomes = {"L0": "Ingresso", "L1": "Financeiro",
-             "L2": "Aprovação no S1", "L3": "Aprovação no S2"}
-
     caminho = [INICIO]
     filtro = np.ones(len(estados), dtype=bool)
     linhas = []
-    colunas = st.columns(4)
-    for col, camada in zip(colunas, nomes):
+    colunas = st.columns(len(CAMADAS_SIMULADOR))
+    for i, (col, camada) in enumerate(zip(colunas, CAMADAS_SIMULADOR)):
+        nome = CAMADAS_SIMULADOR[camada]
+        if i >= conhecidas:
+            col.text_input(nome, "ainda não observado", disabled=True,
+                           key=f"sim_futuro_{camada}")
+            continue
         sucessores = sorted(
             (v for v in modelo.grafo.vizinhos(caminho[-1])
              if v.startswith(camada)),
@@ -696,13 +876,13 @@ def pagina_simulador() -> None:
         if not sucessores:
             break
         escolha = col.selectbox(
-            nomes[camada], sucessores,
-            format_func=lambda v: v.split(":", 1)[1], key=f"sim_{camada}")
+            nome, sucessores, format_func=lambda v: v.split(":", 1)[1],
+            key=f"sim_{camada}")
         filtro &= (estados[camada] == escolha).to_numpy()
         n = int(filtro.sum())
         evasoes = int(estados.evadiu[filtro].sum())
         linhas.append({
-            "camada": nomes[camada],
+            "camada": nome,
             "estado": escolha.split(":", 1)[1],
             "alunos no arco": modelo.contagem_arco_[(caminho[-1], escolha)],
             "evasão no arco": modelo.taxa_arco(caminho[-1], escolha),
@@ -710,32 +890,48 @@ def pagina_simulador() -> None:
             "evasão no caminho": evasoes / n if n else np.nan,
         })
         caminho.append(escolha)
+    return caminho, linhas
 
-    if len(linhas) == len(nomes):
-        final = linhas[-1]
-        taxa = final["evasão no caminho"]
-        c = st.columns(3)
-        c[0].metric("Alunos do treino com este caminho",
-                    final["alunos com este caminho"])
-        c[1].metric("Taxa de evasão", "—" if np.isnan(taxa)
-                    else pct(taxa, 0))
-        c[2].metric("Taxa do treino", pct(modelo.taxa_treino_, 0))
-        if final["alunos com este caminho"] < modelo.min_suporte:
-            st.warning(f"Menos de {modelo.min_suporte} alunos: estimativa "
-                       "pouco confiável (o preditor usa o trecho mais "
-                       "curto com suporte).")
-    st.dataframe(pd.DataFrame(linhas), hide_index=True,
-                 width="stretch",
-                 column_config={
-                     "evasão no arco": st.column_config.ProgressColumn(
-                         format="percent", min_value=0, max_value=1),
-                     "evasão no caminho": st.column_config.ProgressColumn(
-                         format="percent", min_value=0, max_value=1)})
-    desenhar(MontadorVisual().dag_g3(
-        modelo.grafo, resultado["ordem_topologica"],
-        modelo.contagem_vertice_, modelo.evasoes_vertice_,
-        modelo.min_suporte, caminho_usuario=caminho), altura=560)
-    legenda((COR_DESTAQUE, "caminho escolhido"))
+
+def resultado_simulacao(modelo: DagTrajetorias, linhas: list,
+                        limiar: float, momento: str) -> None:
+    """Risco e previsão do G3 para o trecho simulado.
+
+    Mesma regra do preditor: taxa de evasão, no treino, do maior trecho
+    conhecido com pelo menos ``min_suporte`` alunos; sem nenhum, a taxa
+    do treino. Prevê evasão quando o risco passa do limiar.
+    """
+    if not linhas:
+        return
+    com_suporte = [r for r in linhas
+                   if r["alunos com este caminho"] >= modelo.min_suporte]
+    risco = (com_suporte[-1]["evasão no caminho"] if com_suporte
+             else modelo.taxa_treino_)
+    final = linhas[-1]
+    c = st.columns(3)
+    c[0].metric(f"Alunos do treino com este trecho ({momento})",
+                final["alunos com este caminho"], border=True)
+    c[1].metric("Risco do trecho", pct(risco, 0), border=True,
+                help="Taxa de evasão, no treino, de quem fez este trecho.")
+    c[2].metric("Previsão do G3", "evasão" if risco > limiar
+                else "formatura", border=True,
+                help=f"Evasão quando o risco passa de {pct(limiar, 1)} "
+                "(taxa de evasão do treino).")
+    if len(com_suporte) < len(linhas):
+        usado = (f"até {com_suporte[-1]['camada']}" if com_suporte
+                 else "a taxa geral do treino")
+        st.warning(f"Menos de {modelo.min_suporte} alunos com este trecho: "
+                   f"o preditor usa {usado}.")
+    with st.expander("Caminho simulado, passo a passo"):
+        st.dataframe(pd.DataFrame(linhas), hide_index=True,
+                     width="stretch",
+                     column_config={
+                         "evasão no arco": st.column_config.ProgressColumn(
+                             format="percent", min_value=0, max_value=1),
+                         "evasão no caminho":
+                             st.column_config.ProgressColumn(
+                                 format="percent", min_value=0,
+                                 max_value=1)})
 
 
 # ----------------------------------------------------------------------
@@ -744,32 +940,16 @@ def pagina_simulador() -> None:
 def main() -> None:
     st.set_page_config(page_title="Evasão em grafos", page_icon="🎓",
                        layout="wide")
-    paginas = {
-        "Resultados": [
-            st.Page(pagina_visao_geral, title="Visão geral",
-                    icon=":material/dashboard:", default=True),
-        ],
-        "G1 · Similaridade": [
-            st.Page(pagina_g1, title="Corte mínimo",
-                    icon=":material/hub:", url_path="g1"),
-            st.Page(pagina_edmonds_karp, title="Edmonds–Karp passo a passo",
-                    icon=":material/water:", url_path="edmonds-karp"),
-            st.Page(pagina_exploracao, title="Exploração (só treino)",
-                    icon=":material/tune:", url_path="exploracao"),
-        ],
-        "G2 · Dependências": [
-            st.Page(pagina_g2, title="Árvore de informação mútua",
-                    icon=":material/account_tree:", url_path="g2"),
-            st.Page(pagina_kruskal, title="Kruskal passo a passo",
-                    icon=":material/linear_scale:", url_path="kruskal"),
-        ],
-        "G3 · Trajetórias": [
-            st.Page(pagina_g3, title="DAG de trajetórias",
-                    icon=":material/route:", url_path="g3"),
-            st.Page(pagina_simulador, title="Simulador",
-                    icon=":material/alt_route:", url_path="simulador"),
-        ],
-    }
+    paginas = [
+        st.Page(pagina_resumo, title="Resumo",
+                icon=":material/dashboard:", default=True),
+        st.Page(pagina_g1, title="G1 · Corte mínimo",
+                icon=":material/hub:", url_path="g1"),
+        st.Page(pagina_g2, title="G2 · Árvore de dependências",
+                icon=":material/account_tree:", url_path="g2"),
+        st.Page(pagina_g3, title="G3 · DAG de trajetórias",
+                icon=":material/route:", url_path="g3"),
+    ]
     st.navigation(paginas).run()
 
 

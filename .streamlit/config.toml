@@ -1,0 +1,68 @@
+# Tema da interface (streamlit run src/app.py, a partir da raiz).
+# Claro e escuro: o modo segue o sistema e pode ser trocado em
+# ⋮ → Settings → "Choose app theme". As cores semânticas são as mesmas
+# do desenho dos grafos (src/visual.py): vermelho = evasão,
+# azul = formatura, verde = trajetória segura, laranja = destaque.
+
+[theme]
+font = "'Inter':https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseFontSize = 15
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+baseRadius = "8px"
+buttonRadius = "8px"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.light]
+primaryColor = "#1F5F7A"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F6F8"
+textColor = "#1F2933"
+linkColor = "#1F5F7A"
+borderColor = "#E1E6EB"
+codeBackgroundColor = "#F1F4F7"
+codeTextColor = "#1F2933"
+redColor = "#D1495B"
+blueColor = "#2E86AB"
+greenColor = "#3A9E5D"
+orangeColor = "#E08E45"
+yellowColor = "#D9A520"
+violetColor = "#7E63B8"
+grayColor = "#6B7785"
+dataframeBorderColor = "#E1E6EB"
+dataframeHeaderBackgroundColor = "#F4F6F8"
+
+[theme.dark]
+primaryColor = "#4FA3C7"
+backgroundColor = "#0F1419"
+secondaryBackgroundColor = "#1A2129"
+textColor = "#E6EAEE"
+linkColor = "#7CC0DD"
+borderColor = "#2A333C"
+codeBackgroundColor = "#1A2129"
+codeTextColor = "#E6EAEE"
+redColor = "#E46A7A"
+blueColor = "#4FA3C7"
+greenColor = "#5BBF7E"
+orangeColor = "#F0A866"
+yellowColor = "#E8C04A"
+violetColor = "#A08AD6"
+grayColor = "#9AA5B1"
+dataframeBorderColor = "#2A333C"
+dataframeHeaderBackgroundColor = "#1A2129"
+dataframeHeaderTextColor = "#E6EAEE"
+
+[theme.light.sidebar]
+backgroundColor = "#F7F9FA"
+secondaryBackgroundColor = "#EEF2F5"
+textColor = "#1F2933"
+borderColor = "#E1E6EB"
+primaryColor = "#1F5F7A"
+
+[theme.dark.sidebar]
+backgroundColor = "#0B0F13"
+secondaryBackgroundColor = "#1A2129"
+textColor = "#E6EAEE"
+borderColor = "#2A333C"
+primaryColor = "#4FA3C7"
