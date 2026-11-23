@@ -1,8 +1,5 @@
 """G3: DAG de trajetórias. Classe: ``DagTrajetorias(ModeloGrafo)``.
 
-Responsável: Carlos (implementado por Rafael enquanto Carlos fazia o
-G2).
-
 Cada aluno de treino percorre um caminho por cinco camadas::
 
     INICIO -> L0 bolsa x faixa etária -> L1 mensalidade x devedor

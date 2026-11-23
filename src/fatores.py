@@ -1,7 +1,5 @@
 """Análise de fatores (H1 e H2). Classe: ``AnaliseFatores``.
 
-Responsável: Rafael.
-
 - Lift da evasão: taxa de evasão do grupo ÷ taxa geral. As faixas e os
   limiares saem só do treino; o mesmo grupo é medido no teste, sem nada
   reajustado (H2: a direção aprendida nos 80% vale nos 20%?).
